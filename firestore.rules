@@ -1,0 +1,21 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Public collection: sessions, client responses
+    // Anyone can read (clients need session codes)
+    // Anyone can write (clients submit budgets)
+    match /public/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Private collection: admin catalog, payments, credentials
+    // For now: open access (secured by admin password in app)
+    // TODO: Lock down with Firebase Auth when ready
+    match /private/{docId} {
+      allow read, write: if true;
+    }
+  }
+}
