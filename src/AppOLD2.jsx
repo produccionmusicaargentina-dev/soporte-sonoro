@@ -101,13 +101,9 @@ export default function App(){
   useEffect(()=>{if(window.location.hash==="#admin")setMode("login");const h=()=>{if(window.location.hash==="#admin")setMode("login");};window.addEventListener("hashchange",h);return()=>window.removeEventListener("hashchange",h);},[]);
 
   async function join(){const c=inCode.trim().toUpperCase();if(!c){setErr("Ingresa un codigo");return;}
-    try{
-      // Check if code was already used
-      let used=false;try{const u=await window.storage.get("ss-used-"+c,true);if(u&&u.value)used=true;}catch(e){}
-      if(used){setErr("Este codigo ya fue utilizado");return;}
-      let found=false;try{const r=await window.storage.get("ss-ses-"+c,true);if(r&&r.value)found=true;}catch(e){}
-      if(!found){try{const r=await window.storage.get("swcat-session-"+c,true);if(r&&r.value)found=true;}catch(e){}}
-      if(!found){setErr("Codigo no encontrado");return;}setSesCode(c);setMode("client");}catch(e){setErr("Error");}}
+    try{let found=false;try{const r=await window.storage.get("ss-ses-"+c,true);if(r&&r.value)found=true;}catch(e){}
+    if(!found){try{const r=await window.storage.get("swcat-session-"+c,true);if(r&&r.value)found=true;}catch(e){}}
+    if(!found){setErr("Codigo no encontrado");return;}setSesCode(c);setMode("client");}catch(e){setErr("Error");}}
 
   async function trackBudget(){if(!trackNum.trim()){setTrackResult({err:"Ingresa tu numero"});return;}
     try{const ks=await window.storage.list("ss-resp-",true);for(const k of(ks?.keys||[])){try{const r=await window.storage.get(k,true);if(r?.value){const d=JSON.parse(r.value);if(d.budgetNumber===trackNum.trim().toUpperCase()){setTrackResult(d);return;}}}catch{}}setTrackResult({err:"No encontrado"});}catch{setTrackResult({err:"Error"});}}
@@ -183,7 +179,7 @@ function AdminPanel({onBack}){
 
   async function loadResps(){try{const ks=await window.storage.list("ss-resp-",true);const rs=[];for(const k of(ks?.keys||[])){try{const r=await window.storage.get(k,true);if(r?.value)rs.push({...JSON.parse(r.value),_key:k});}catch{}}setResps(rs.sort((a,b)=>(b.timestamp||"").localeCompare(a.timestamp||"")));}catch{}}
   async function updateSt(resp,st){const u={...resp,status:st};try{await window.storage.set(resp._key,JSON.stringify(u),true);}catch{}setResps(p=>p.map(r=>r._key===resp._key?u:r));if(viewR?._key===resp._key)setViewR(u);}
-  function genExp(r){const l=[];l.push("SOPORTE SONORO - #"+(r.budgetNumber||""));l.push("Cliente: "+(r.clientName||""));l.push("---");const pd=(r.selectedApps||[]).filter(a=>!a.isGift);const gf=(r.selectedApps||[]).filter(a=>a.isGift);pd.forEach((a,i)=>{l.push((i+1)+". "+a.name+" $"+(a.price||0).toLocaleString("es-AR"));(a.links||[]).forEach(lk=>l.push("   "+lk.url));});if(gf.length){l.push("\n--- REGALOS ---");gf.forEach(a=>{l.push("* "+a.name+" - GRATIS");(a.links||[]).forEach(lk=>l.push("   "+lk.url));});}if((r.customRequests||[]).length){l.push("\n--- SOLICITUDES ---");r.customRequests.forEach(cr=>l.push("* "+cr.name+(cr.note?" - "+cr.note:"")));}l.push("---\nTOTAL: $"+(r.total||0).toLocaleString("es-AR"));return l.join("\n");}
+  function genExp(r){const l=[];l.push("SOPORTE SONORO - #"+(r.budgetNumber||""));l.push("Cliente: "+(r.clientName||""));l.push("---");(r.selectedApps||[]).filter(a=>!a.isGift).forEach((a,i)=>{l.push((i+1)+". "+a.name+" $"+(a.price||0).toLocaleString("es-AR"));(a.links||[]).forEach(lk=>l.push("   "+lk.url));});l.push("---\nTOTAL: $"+(r.total||0).toLocaleString("es-AR"));return l.join("\n");}
   function doCopy(txt){copyText(txt);setCopied(true);setTimeout(()=>setCopied(false),2e3);}
 
   // Sorteo
@@ -235,7 +231,7 @@ function AdminPanel({onBack}){
       {filt.map(a=>{const is=sel.has(a.id);const ig=giftIds.has(a.id);return(<div key={a.id} style={ig?crdG:is?crdSel:crd}><div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}><input type="checkbox" checked={is} onChange={()=>toggleS(a.id)} style={{width:18,height:18,accentColor:"#4f46e5"}}/><span style={{fontWeight:700,fontSize:13,flex:1,cursor:"pointer"}} onClick={()=>toggleS(a.id)}>{a.name}</span>{ig&&<Gift/>}<OsB os={a.os}/><span style={{fontWeight:700,color:ig?"#16a34a":"#4f46e5",fontSize:13,textDecoration:ig?"line-through":"none"}}>${(a.price||0).toLocaleString("es-AR")}</span>{is&&<button onClick={()=>toggleG(a.id)} style={{background:ig?"#fbbf24":"#f3f4f6",border:"none",borderRadius:6,padding:"3px 8px",cursor:"pointer"}}>R</button>}</div></div>);})}
       {sel.size>0&&<div style={{position:"sticky",bottom:0,background:"#f0f0ff",borderRadius:12,padding:"12px",marginTop:14,borderTop:"2px solid #4f46e5",display:"flex",alignItems:"center",gap:10}}><span style={{fontWeight:700,fontSize:15,flex:1}}>Total: ${totP.toLocaleString("es-AR")}</span><button style={bG} onClick={()=>setShowExp(true)}>Generar</button></div>}
     </div>}
-    {tab==="session"&&showExp&&<div><button style={{...bS,marginBottom:14}} onClick={()=>setShowExp(false)}>Volver</button><div style={sec}><textarea readOnly id="exp-ta" value={"SOPORTE SONORO\n---\n"+paid.map((a,i)=>(i+1)+". "+a.name+" $"+(a.price||0).toLocaleString("es-AR")+"\n"+(a.links||[]).map(l=>"   "+l.url).join("\n")).join("\n")+(gifts.length?"\n--- REGALOS ---\n"+gifts.map(a=>"* "+a.name+" - GRATIS\n"+(a.links||[]).map(l=>"   "+l.url).join("\n")).join("\n"):"")+"\n---\nTOTAL: $"+(totP+extra).toLocaleString("es-AR")} style={{width:"100%",minHeight:200,fontFamily:"monospace",fontSize:12,padding:14,borderRadius:8,border:"1.5px solid #ddd",background:"#fff",resize:"vertical",boxSizing:"border-box"}}/><div style={{display:"flex",gap:10,marginTop:12}}><button style={bP} onClick={()=>doCopy(document.getElementById("exp-ta").value)}>{copied?"OK":"Copiar"}</button><button style={bO} onClick={()=>printText("SS",document.getElementById("exp-ta").value)}>Imprimir</button></div></div></div>}
+    {tab==="session"&&showExp&&<div><button style={{...bS,marginBottom:14}} onClick={()=>setShowExp(false)}>Volver</button><div style={sec}><textarea readOnly id="exp-ta" value={"SOPORTE SONORO\n---\n"+paid.map((a,i)=>(i+1)+". "+a.name+" $"+(a.price||0).toLocaleString("es-AR")+"\n"+(a.links||[]).map(l=>"   "+l.url).join("\n")).join("\n")+(gifts.length?"\n--- REGALOS ---\n"+gifts.map(a=>"* "+a.name).join("\n"):"")+"\n---\nTOTAL: $"+(totP+extra).toLocaleString("es-AR")} style={{width:"100%",minHeight:200,fontFamily:"monospace",fontSize:12,padding:14,borderRadius:8,border:"1.5px solid #ddd",background:"#fff",resize:"vertical",boxSizing:"border-box"}}/><div style={{display:"flex",gap:10,marginTop:12}}><button style={bP} onClick={()=>doCopy(document.getElementById("exp-ta").value)}>{copied?"OK":"Copiar"}</button><button style={bO} onClick={()=>printText("SS",document.getElementById("exp-ta").value)}>Imprimir</button></div></div></div>}
 
     {tab==="payment"&&<div><div style={{display:"flex",justifyContent:"space-between",marginBottom:14}}><h3 style={{margin:0}}>Pagos</h3><button style={bP} onClick={()=>setPayments([...payments,{id:uid(),label:"",alias:"",cbu:"",titular:"",banco:"",extra:""}])}>+</button></div>
       {payments.map(pm=>(<div key={pm.id} style={{...sec,position:"relative"}}>{payments.length>1&&<button onClick={()=>setPayments(payments.filter(p=>p.id!==pm.id))} style={{position:"absolute",top:12,right:14,background:"none",border:"none",color:"#ccc",cursor:"pointer"}}>x</button>}
@@ -331,8 +327,6 @@ function ClientPanel({code,onBack}){
     const r={sessionCode:code,budgetNumber:num,clientName:cName.trim()||"Anonimo",clientEmail:cEmail.trim(),osFilter:eOs,macVersion:macVer,isGiftCard:isGift===true,giftTo:giftTo.trim(),giftFrom:giftFrom.trim(),referralCode:refCode.trim().toUpperCase()||null,myReferralCode:mrc,refDiscount,timestamp:new Date().toISOString(),status:"pending",selectedApps:selApps.map(a=>({...a,isGift:autoGift.has(a.id)})),selectedOffers:activeOffers,giftSelections:gPool.filter(a=>gSel.has(a.id)),customRequests:customReqs,total:totP};
     try{await window.storage.set("ss-resp-"+code+"-"+uid(),JSON.stringify(r),true);
       try{const c=await window.storage.get(BCK);const cur=c?.value?JSON.parse(c.value):nBud;await window.storage.set(BCK,JSON.stringify(cur+1));}catch{}
-      // Mark session as used
-      try{await window.storage.set("ss-used-"+code,"1",true);}catch{}
       if(isGift){setGiftSvg(generateGiftSVG(num,selApps,giftFrom.trim(),giftTo.trim()));}
       setDone(true);}catch{alert("Error");}
   }
