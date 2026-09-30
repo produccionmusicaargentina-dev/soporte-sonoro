@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import * as XLSX from "xlsx";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
-const CK="ss-catalog-v2",PK="ss-promo-v1",PYK="ss-payments-v1",BCK="ss-budget-ctr",ADK="ss-admin-cred",OFK="ss-offers-v2",PKGK="ss-packages-v1",CFGK="ss-config-v1";
+const CK="ss-catalog-v2",PK="ss-promo-v1",PYK="ss-payments-v1",BCK="ss-budget-ctr",ADK="ss-admin-cred",OFK="ss-offers-v2";
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
 function shortCode(){return uid().toUpperCase().slice(0,6);}
 function isOfferActive(o){if(!o.active)return false;const now=new Date(),today=now.getDay(),dom=now.getDate(),dim=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();if(o.startDate&&new Date(o.startDate)>now)return false;if(o.endDate&&new Date(o.endDate)<now)return false;if(o.scheduleDays?.length>0&&!o.scheduleDays.includes(today))return false;if(o.endOfMonth&&dom<dim-4)return false;return true;}
@@ -13,43 +13,40 @@ function printText(ti,tx){const w=window.open("","_blank","width=800,height=600"
 function Countdown({endDate}){const[l,setL]=useState("");useEffect(()=>{const iv=setInterval(()=>{const d=new Date(endDate)-new Date();if(d<=0){setL("Fin");clearInterval(iv);return;}const dd=Math.floor(d/864e5),h=Math.floor((d%864e5)/36e5),m=Math.floor((d%36e5)/6e4);setL((dd?dd+"d ":"")+(h?h+"h ":"")+m+"m");},1e3);return()=>clearInterval(iv);},[endDate]);return<span style={{color:"#ef4444",fontWeight:700,fontSize:11}}>{l}</span>;}
 function fmtDate(ts){if(!ts)return"";const d=new Date(ts);return d.toLocaleDateString("es-AR");}
 function fmtDateTime(ts){if(!ts)return"";const d=new Date(ts);return d.toLocaleDateString("es-AR")+" "+d.toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});}
-function fmtPrice(v,cur){return(cur==="USD"?"US$":"$")+(v||0).toLocaleString("es-AR");}
 
 function generateGiftSVG(code,items,from,to){
   const it=items.slice(0,5).map(a=>a.name).join(", ")+(items.length>5?" +"+(items.length-5)+" mas":"");
   return`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" style="max-width:100%;height:auto"><defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1e1b4b"/><stop offset="100%" stop-color="#312e81"/></linearGradient></defs><rect width="800" height="400" rx="20" fill="url(#bg)"/><rect x="16" y="16" width="768" height="368" rx="14" fill="none" stroke="#818cf8" stroke-width="1.5" stroke-dasharray="8 4"/><text x="400" y="55" text-anchor="middle" fill="#c7d2fe" font-family="Arial" font-size="13" letter-spacing="4">SOPORTE SONORO</text><text x="400" y="100" text-anchor="middle" fill="#fff" font-family="Arial" font-size="30" font-weight="bold">GIFT CARD</text><text x="400" y="130" text-anchor="middle" fill="#a5b4fc" font-family="Arial" font-size="14">Vale por instalaciones y optimizaciones de audio</text><rect x="280" y="148" width="240" height="40" rx="10" fill="#4f46e5"/><text x="400" y="175" text-anchor="middle" fill="#fff" font-family="monospace" font-size="22" font-weight="bold">${code}</text><text x="400" y="215" text-anchor="middle" fill="#c7d2fe" font-family="Arial" font-size="12">${it}</text>${from?`<text x="400" y="260" text-anchor="middle" fill="#a5b4fc" font-family="Arial" font-size="14">De: ${from}${to?" | Para: "+to:""}</text>`:to?`<text x="400" y="260" text-anchor="middle" fill="#a5b4fc" font-family="Arial" font-size="14">Para: ${to}</text>`:""}<line x1="80" y1="290" x2="720" y2="290" stroke="#4338ca" stroke-width="1"/><text x="400" y="320" text-anchor="middle" fill="#818cf8" font-family="Arial" font-size="12">Para coordinar tu instalacion contacta a:</text><text x="400" y="345" text-anchor="middle" fill="#e0e7ff" font-family="Arial" font-size="14" font-weight="bold">produccionmusicaargentina@gmail.com</text><text x="400" y="375" text-anchor="middle" fill="#6366f1" font-family="Arial" font-size="10">Presenta este codigo al contactarnos</text></svg>`;
 }
 
-async function notifyAdmin(data){try{await fetch("/.netlify/functions/notify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});}catch{}}
-
 const defaultCatalog=[
-  {id:"p001",name:"u-he Diva",os:"both",price:17500,priceUsd:0,category:"Synth",giftEligible:false,links:[{type:"magnet",url:"magnet:?xt=urn:btih:DEE0B91B34B251E11297F4A4441C752ED4035543"}]},
-  {id:"p002",name:"Arturia V Collection X",os:"windows",price:22500,priceUsd:0,category:"Synth",giftEligible:false,links:[{type:"magnet",url:"magnet:?xt=urn:btih:514ED8096EA63DC285B747095D9CAC75C1168E72"}]},
-  {id:"p003",name:"Arturia V Collection X",os:"mac",price:37500,priceUsd:0,category:"Synth",giftEligible:false,links:[{type:"magnet",url:"magnet:?xt=urn:btih:C5C60BFCF67E60557DD59C7A4A9CFE7277F079C7"}]},
-  {id:"p004",name:"u-he Hive 2",os:"windows",price:17500,priceUsd:0,category:"Synth",giftEligible:false,links:[{type:"magnet",url:"magnet:?xt=urn:btih:5B4E3D294C19B5F015E772CDC74CD7B0055B5BCF"}]},
-  {id:"p005",name:"u-he Hive 2",os:"mac",price:17500,priceUsd:0,category:"Synth",giftEligible:false,links:[{type:"drive",url:"https://drive.google.com/file/d/1J5N1rJaKyCbWHOGeRwnSF9eA7gBYMnaq/view"}]},
-  {id:"p006",name:"Waves Bundle",os:"mac",price:27500,priceUsd:0,category:"FX / Bundle",giftEligible:false,links:[{type:"magnet",url:"magnet:?xt=urn:btih:70E723ECAEFCEC2F11B88F36639687017E542F57"}]},
-  {id:"p007",name:"Fabfilter Bundle",os:"mac",price:19500,priceUsd:0,category:"FX / Bundle",giftEligible:false,links:[{type:"magnet",url:"magnet:?xt=urn:btih:495071ED878483DE33B19C496E2BD60E68482CAA"}]},
-  {id:"p008",name:"Voxengo Span Plus",os:"mac",price:17500,priceUsd:0,category:"FX",giftEligible:false,links:[]},{id:"p009",name:"Valhalla Bundle",os:"mac",price:17500,priceUsd:0,category:"FX / Bundle",giftEligible:false,links:[]},
-  {id:"p010",name:"Synapse Audio Legend",os:"mac",price:17500,priceUsd:0,category:"Synth",giftEligible:false,links:[]},{id:"p011",name:"Soothe2",os:"mac",price:17500,priceUsd:0,category:"FX",giftEligible:false,links:[]},
-  {id:"p012",name:"SubBoomBass 2",os:"mac",price:17500,priceUsd:0,category:"Synth",giftEligible:false,links:[]},{id:"p013",name:"Serum",os:"mac",price:17500,priceUsd:0,category:"Synth",giftEligible:false,links:[]},
-  {id:"p014",name:"Kickstart 2",os:"both",price:17500,priceUsd:0,category:"FX",giftEligible:false,links:[]},{id:"p015",name:"Synapse Audio Obsession",os:"mac",price:19500,priceUsd:0,category:"Synth",giftEligible:false,links:[]},
-  {id:"p016",name:"Dada Life Bundle",os:"mac",price:19500,priceUsd:0,category:"FX / Bundle",giftEligible:false,links:[]},
-  {id:"p017",name:"3 Pack Librerias",os:"both",price:17500,priceUsd:0,category:"Librerias",giftEligible:false,links:[]},{id:"p018",name:"5 Pack Librerias",os:"both",price:22500,priceUsd:0,category:"Librerias",giftEligible:false,links:[]},{id:"p019",name:"10 Pack Librerias",os:"both",price:37500,priceUsd:0,category:"Librerias",giftEligible:false,links:[]},
-  {id:"p020",name:"Ableton Live 12 Suite",os:"windows",price:27500,priceUsd:0,category:"DAW",giftEligible:false,links:[]},
-  {id:"p021",name:"Fabfilter Bundle",os:"windows",price:19500,priceUsd:0,category:"FX / Bundle",giftEligible:false,links:[]},{id:"p022",name:"DS Tantra 2",os:"windows",price:17500,priceUsd:0,category:"Synth",giftEligible:false,links:[]},
-  {id:"p023",name:"Soundtheory Gullfoss",os:"mac",price:17500,priceUsd:0,category:"FX",giftEligible:false,links:[]},{id:"p024",name:"Kazrog KClip 3",os:"both",price:17500,priceUsd:0,category:"FX",giftEligible:false,links:[]},
-  {id:"p025",name:"u-he Repro 1/5",os:"both",price:17500,priceUsd:0,category:"Synth",giftEligible:false,links:[]},{id:"p026",name:"Arturia FX Collection 5",os:"windows",price:22500,priceUsd:0,category:"FX / Bundle",giftEligible:false,links:[]},
-  {id:"p027",name:"Omnisphere 3",os:"windows",price:32500,priceUsd:0,category:"Synth",giftEligible:false,links:[]},{id:"p028",name:"Dune 3",os:"windows",price:17500,priceUsd:0,category:"Synth",giftEligible:false,links:[]},
-  {id:"p029",name:"Waves Bundle",os:"windows",price:27500,priceUsd:0,category:"FX / Bundle",giftEligible:false,links:[]},{id:"p030",name:"Spire",os:"windows",price:19500,priceUsd:0,category:"Synth",giftEligible:false,links:[]},
-  {id:"p031",name:"Swivel Audio The Sauce",os:"windows",price:19500,priceUsd:0,category:"FX",giftEligible:false,links:[]},{id:"p032",name:"Nexus 5",os:"windows",price:27500,priceUsd:0,category:"Synth",giftEligible:false,links:[]},
-  {id:"p033",name:"ShaperBox 3",os:"both",price:17500,priceUsd:0,category:"FX",giftEligible:false,links:[]},{id:"p034",name:"Trackspacer",os:"mac",price:17500,priceUsd:0,category:"FX",giftEligible:false,links:[]},
-  {id:"p035",name:"God Particle",os:"mac",price:17500,priceUsd:0,category:"FX",giftEligible:false,links:[]},{id:"p036",name:"Brainworx Bundle",os:"mac",price:22500,priceUsd:0,category:"FX / Bundle",giftEligible:false,links:[]},
-  {id:"p037",name:"Roland RE-201",os:"windows",price:17500,priceUsd:0,category:"FX",giftEligible:false,links:[]},{id:"p038",name:"Soundtoys",os:"windows",price:17500,priceUsd:0,category:"FX / Bundle",giftEligible:false,links:[]},
-  {id:"p039",name:"Trilian",os:"both",price:27500,priceUsd:0,category:"Synth",giftEligible:false,links:[]},{id:"p040",name:"MiniMeters",os:"both",price:17500,priceUsd:0,category:"Utility",giftEligible:false,links:[]},
-  {id:"p041",name:"Legend HZ",os:"windows",price:19500,priceUsd:0,category:"Synth",giftEligible:false,links:[]},
-  {id:"s001",name:"Optimizacion del sistema",os:"both",price:32500,priceUsd:0,category:"Servicio",giftEligible:false,links:[]},
-  {id:"s002",name:"Optimizacion + Limpieza",os:"both",price:47500,priceUsd:0,category:"Servicio",giftEligible:false,links:[]},
+  {id:"p001",name:"u-he Diva",os:"both",price:17500,category:"Synth",giftEligible:false,links:[{type:"magnet",url:"magnet:?xt=urn:btih:DEE0B91B34B251E11297F4A4441C752ED4035543"}]},
+  {id:"p002",name:"Arturia V Collection X",os:"windows",price:22500,category:"Synth",giftEligible:false,links:[{type:"magnet",url:"magnet:?xt=urn:btih:514ED8096EA63DC285B747095D9CAC75C1168E72"}]},
+  {id:"p003",name:"Arturia V Collection X",os:"mac",price:37500,category:"Synth",giftEligible:false,links:[{type:"magnet",url:"magnet:?xt=urn:btih:C5C60BFCF67E60557DD59C7A4A9CFE7277F079C7"}]},
+  {id:"p004",name:"u-he Hive 2",os:"windows",price:17500,category:"Synth",giftEligible:false,links:[{type:"magnet",url:"magnet:?xt=urn:btih:5B4E3D294C19B5F015E772CDC74CD7B0055B5BCF"}]},
+  {id:"p005",name:"u-he Hive 2",os:"mac",price:17500,category:"Synth",giftEligible:false,links:[{type:"drive",url:"https://drive.google.com/file/d/1J5N1rJaKyCbWHOGeRwnSF9eA7gBYMnaq/view"}]},
+  {id:"p006",name:"Waves Bundle",os:"mac",price:27500,category:"FX / Bundle",giftEligible:false,links:[{type:"magnet",url:"magnet:?xt=urn:btih:70E723ECAEFCEC2F11B88F36639687017E542F57"}]},
+  {id:"p007",name:"Fabfilter Bundle",os:"mac",price:19500,category:"FX / Bundle",giftEligible:false,links:[{type:"magnet",url:"magnet:?xt=urn:btih:495071ED878483DE33B19C496E2BD60E68482CAA"}]},
+  {id:"p008",name:"Voxengo Span Plus",os:"mac",price:17500,category:"FX",giftEligible:false,links:[]},{id:"p009",name:"Valhalla Bundle",os:"mac",price:17500,category:"FX / Bundle",giftEligible:false,links:[]},
+  {id:"p010",name:"Synapse Audio Legend",os:"mac",price:17500,category:"Synth",giftEligible:false,links:[]},{id:"p011",name:"Soothe2",os:"mac",price:17500,category:"FX",giftEligible:false,links:[]},
+  {id:"p012",name:"SubBoomBass 2",os:"mac",price:17500,category:"Synth",giftEligible:false,links:[]},{id:"p013",name:"Serum",os:"mac",price:17500,category:"Synth",giftEligible:false,links:[]},
+  {id:"p014",name:"Kickstart 2",os:"both",price:17500,category:"FX",giftEligible:false,links:[]},{id:"p015",name:"Synapse Audio Obsession",os:"mac",price:19500,category:"Synth",giftEligible:false,links:[]},
+  {id:"p016",name:"Dada Life Bundle",os:"mac",price:19500,category:"FX / Bundle",giftEligible:false,links:[]},
+  {id:"p017",name:"3 Pack Librerias",os:"both",price:17500,category:"Librerias",giftEligible:false,links:[]},{id:"p018",name:"5 Pack Librerias",os:"both",price:22500,category:"Librerias",giftEligible:false,links:[]},{id:"p019",name:"10 Pack Librerias",os:"both",price:37500,category:"Librerias",giftEligible:false,links:[]},
+  {id:"p020",name:"Ableton Live 12 Suite",os:"windows",price:27500,category:"DAW",giftEligible:false,links:[]},
+  {id:"p021",name:"Fabfilter Bundle",os:"windows",price:19500,category:"FX / Bundle",giftEligible:false,links:[]},{id:"p022",name:"DS Tantra 2",os:"windows",price:17500,category:"Synth",giftEligible:false,links:[]},
+  {id:"p023",name:"Soundtheory Gullfoss",os:"mac",price:17500,category:"FX",giftEligible:false,links:[]},{id:"p024",name:"Kazrog KClip 3",os:"both",price:17500,category:"FX",giftEligible:false,links:[]},
+  {id:"p025",name:"u-he Repro 1/5",os:"both",price:17500,category:"Synth",giftEligible:false,links:[]},{id:"p026",name:"Arturia FX Collection 5",os:"windows",price:22500,category:"FX / Bundle",giftEligible:false,links:[]},
+  {id:"p027",name:"Omnisphere 3",os:"windows",price:32500,category:"Synth",giftEligible:false,links:[]},{id:"p028",name:"Dune 3",os:"windows",price:17500,category:"Synth",giftEligible:false,links:[]},
+  {id:"p029",name:"Waves Bundle",os:"windows",price:27500,category:"FX / Bundle",giftEligible:false,links:[]},{id:"p030",name:"Spire",os:"windows",price:19500,category:"Synth",giftEligible:false,links:[]},
+  {id:"p031",name:"Swivel Audio The Sauce",os:"windows",price:19500,category:"FX",giftEligible:false,links:[]},{id:"p032",name:"Nexus 5",os:"windows",price:27500,category:"Synth",giftEligible:false,links:[]},
+  {id:"p033",name:"ShaperBox 3",os:"both",price:17500,category:"FX",giftEligible:false,links:[]},{id:"p034",name:"Trackspacer",os:"mac",price:17500,category:"FX",giftEligible:false,links:[]},
+  {id:"p035",name:"God Particle",os:"mac",price:17500,category:"FX",giftEligible:false,links:[]},{id:"p036",name:"Brainworx Bundle",os:"mac",price:22500,category:"FX / Bundle",giftEligible:false,links:[]},
+  {id:"p037",name:"Roland RE-201",os:"windows",price:17500,category:"FX",giftEligible:false,links:[]},{id:"p038",name:"Soundtoys",os:"windows",price:17500,category:"FX / Bundle",giftEligible:false,links:[]},
+  {id:"p039",name:"Trilian",os:"both",price:27500,category:"Synth",giftEligible:false,links:[]},{id:"p040",name:"MiniMeters",os:"both",price:17500,category:"Utility",giftEligible:false,links:[]},
+  {id:"p041",name:"Legend HZ",os:"windows",price:19500,category:"Synth",giftEligible:false,links:[]},
+  {id:"s001",name:"Optimizacion del sistema",os:"both",price:32500,category:"Servicio",giftEligible:false,links:[]},
+  {id:"s002",name:"Optimizacion + Limpieza",os:"both",price:47500,category:"Servicio",giftEligible:false,links:[]},
 ];
 
 const OsB=({os})=>{const m={windows:{l:"Win",bg:"#dbeafe",c:"#1e40af"},mac:{l:"Mac",bg:"#f3e8ff",c:"#7c3aed"},both:{l:"W+M",bg:"#d1fae5",c:"#065f46"}};const s=m[os]||m.both;return<span style={{background:s.bg,color:s.c,padding:"2px 6px",borderRadius:4,fontSize:10,fontWeight:600}}>{s.l}</span>;};
@@ -59,16 +56,14 @@ const inp={padding:"8px 12px",borderRadius:8,border:"1.5px solid #ddd",fontSize:
 const bP={padding:"8px 18px",borderRadius:8,border:"none",background:"#4f46e5",color:"#fff",fontWeight:600,fontSize:12,cursor:"pointer"};
 const bG={...bP,background:"#059669"};const bD={...bP,background:"#ef4444"};
 const bO={...bP,background:"transparent",color:"#4f46e5",border:"1.5px solid #4f46e5"};const bS={...bO,padding:"4px 10px",fontSize:11};
-const bW={...bP,background:"#25D366",fontSize:11,padding:"6px 12px"};
 const crd={background:"#fff",border:"1.5px solid #e8e8ee",borderRadius:10,padding:"12px 14px",marginBottom:8};
 const crdSel={...crd,borderColor:"#4f46e5",boxShadow:"0 0 0 2px rgba(79,70,229,.12)"};const crdG={...crd,borderColor:"#f59e0b",background:"#fffdf5"};
 const lbl={fontSize:11,color:"#666",display:"block",marginBottom:3,marginTop:12,fontWeight:600};
 const tB=(a)=>({padding:"6px 10px",borderRadius:8,border:"2px solid",cursor:"pointer",fontWeight:600,fontSize:10,borderColor:a?"#4f46e5":"#e2e2e8",background:a?"#4f46e5":"#fff",color:a?"#fff":"#555",whiteSpace:"nowrap"});
 const sec={background:"#f8fafc",borderRadius:10,padding:"16px 14px",border:"1.5px solid #e2e2e8",marginBottom:14};
 
+// Payment status colors
 function payColor(r){if(!r.status||r.status==="pending")return"#f59e0b";if(r.status==="rejected")return"#ef4444";if(r.status==="accepted"||r.status==="installed"){if(r.pendingAmount>0)return"#ef4444";return"#059669";}return"#e2e2e8";}
-function getP(a,cur){return cur==="USD"?(a.priceUsd||0):(a.price||0);}
-function waLink(phone,msg){return"https://wa.me/"+phone.replace(/[^0-9]/g,"")+"?text="+encodeURIComponent(msg);}
 
 // ====== MAIN ======
 export default function App(){
@@ -95,7 +90,7 @@ export default function App(){
       <p style={{fontSize:12,color:"#888",marginBottom:6}}>Consultar presupuesto</p>
       <div style={{display:"flex",gap:8}}><input style={{...inp,flex:1,textAlign:"center",fontSize:12,textTransform:"uppercase"}} value={trackNum} onChange={e=>{setTrackNum(e.target.value);setTrackResult(null);}} placeholder="PRES-2026-0001" onKeyDown={e=>e.key==="Enter"&&trackBudget()}/><button style={bS} onClick={trackBudget}>Buscar</button></div>
       {trackResult&&(trackResult.err?<p style={{color:"#ef4444",fontSize:12,marginTop:6}}>{trackResult.err}</p>:
-      <div style={{...crd,textAlign:"left",marginTop:8,borderLeft:"4px solid "+payColor(trackResult)}}><div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}><span style={{fontWeight:800,color:"#4f46e5",fontSize:13}}>#{trackResult.budgetNumber}</span><span style={{fontSize:11,padding:"2px 8px",borderRadius:6,fontWeight:600,background:payColor(trackResult)+"20",color:payColor(trackResult)}}>{trackResult.status||"pendiente"}</span></div><div style={{fontSize:12,color:"#666",marginTop:4}}>Total: <strong>{fmtPrice(trackResult.total,trackResult.currency)}</strong>{trackResult.pendingAmount>0&&<span style={{color:"#ef4444",fontWeight:600}}> (pendiente: {fmtPrice(trackResult.pendingAmount,trackResult.currency)})</span>}</div></div>)}
+      <div style={{...crd,textAlign:"left",marginTop:8,borderLeft:"4px solid "+payColor(trackResult)}}><div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}><span style={{fontWeight:800,color:"#4f46e5",fontSize:13}}>#{trackResult.budgetNumber}</span><span style={{fontSize:11,padding:"2px 8px",borderRadius:6,fontWeight:600,background:payColor(trackResult)+"20",color:payColor(trackResult)}}>{trackResult.status||"pendiente"}</span></div><div style={{fontSize:12,color:"#666",marginTop:4}}>Total: <strong>${(trackResult.total||0).toLocaleString("es-AR")}</strong>{trackResult.pendingAmount>0&&<span style={{color:"#ef4444",fontWeight:600}}> (pendiente: ${trackResult.pendingAmount.toLocaleString("es-AR")})</span>}</div></div>)}
     </div>
   </div>);
   if(mode==="login")return<AdminLogin onAuth={()=>setMode("admin")} onBack={()=>{setMode(null);window.location.hash="";}}/>;
@@ -128,11 +123,8 @@ function AdminPanel({onBack}){
   const[offers,setOffers]=useState([]);const[showOfferForm,setShowOfferForm]=useState(false);const[editOffer,setEditOffer]=useState(null);
   const[copied,setCopied]=useState(false);const[sorteoCount,setSorteoCount]=useState(1);const[sorteoResult,setSorteoResult]=useState(null);
   const[respSearch,setRespSearch]=useState("");const[respFilter,setRespFilter]=useState("all");
-  const[nlSubject,setNlSubject]=useState("");const[nlBody,setNlBody]=useState("");const[nlSelPlugins,setNlSelPlugins]=useState(new Set());const[nlSending,setNlSending]=useState(false);const[nlResult,setNlResult]=useState("");
+  const[nlSubject,setNlSubject]=useState("");const[nlBody,setNlBody]=useState("");
   const[statMode,setStatMode]=useState("month");
-  const[packages,setPackages]=useState([]);const[showPkgForm,setShowPkgForm]=useState(false);const[editPkg,setEditPkg]=useState(null);
-  const[sesCurrency,setSesCurrency]=useState("ARS");const[sesPkgId,setSesPkgId]=useState("");
-  const[adminCfg,setAdminCfg]=useState({phone:"",email:"produccionmusicaargentina@gmail.com"});
   const fileRef=useRef(null);
 
   useEffect(()=>{(async()=>{
@@ -140,13 +132,10 @@ function AdminPanel({onBack}){
     try{const p=await window.storage.get(PK);if(p?.value){const d=JSON.parse(p.value);setPEvery(d.every||3);setPMode(d.mode||"cheapest");}}catch{}
     try{const p=await window.storage.get(PYK);if(p?.value)setPayments(JSON.parse(p.value));}catch{}
     try{const p=await window.storage.get(OFK);if(p?.value)setOffers(JSON.parse(p.value));}catch{}
-    try{const p=await window.storage.get(PKGK);if(p?.value)setPackages(JSON.parse(p.value));}catch{}
-    try{const p=await window.storage.get(CFGK);if(p?.value)setAdminCfg(JSON.parse(p.value));}catch{}
     setLoaded(true);})();},[]);
   useEffect(()=>{if(loaded)try{window.storage.set(CK,JSON.stringify(apps))}catch{}},[apps,loaded]);
   useEffect(()=>{if(loaded)try{window.storage.set(PK,JSON.stringify({every:pEvery,mode:pMode}))}catch{}},[pEvery,pMode,loaded]);
   useEffect(()=>{if(loaded)try{window.storage.set(OFK,JSON.stringify(offers))}catch{}},[offers,loaded]);
-  useEffect(()=>{if(loaded)try{window.storage.set(PKGK,JSON.stringify(packages))}catch{}},[packages,loaded]);
 
   const filt=apps.filter(a=>{const mO=osF==="all"||a.os===osF||a.os==="both";return mO&&(a.name.toLowerCase().includes(search.toLowerCase())||(a.category||"").toLowerCase().includes(search.toLowerCase()));});
   const selApps=apps.filter(a=>sel.has(a.id));const paid=selApps.filter(a=>!giftIds.has(a.id));const gifts=selApps.filter(a=>giftIds.has(a.id));
@@ -157,22 +146,23 @@ function AdminPanel({onBack}){
   async function loadResps(){try{const ks=await window.storage.list("ss-resp-",true);const rs=[];for(const k of(ks?.keys||[])){try{const r=await window.storage.get(k,true);if(r?.value)rs.push({...JSON.parse(r.value),_key:k});}catch{}}setResps(rs.sort((a,b)=>(b.timestamp||"").localeCompare(a.timestamp||"")));}catch{}}
   async function updateResp(resp,updates){const u={...resp,...updates};try{await window.storage.set(resp._key,JSON.stringify(u),true);}catch{}setResps(p=>p.map(r=>r._key===resp._key?u:r));if(viewR?._key===resp._key)setViewR(u);}
 
-  function genExp(r){const cur=r.currency||"ARS";const l=[];l.push("SOPORTE SONORO - #"+(r.budgetNumber||"")+(r.packageName?" ["+r.packageName+"]":""));l.push("Cliente: "+(r.clientName||"")+(r.clientPhone?" | Tel: "+r.clientPhone:"")+" | "+fmtDateTime(r.timestamp));l.push("Moneda: "+cur);l.push("---");const pd=(r.selectedApps||[]).filter(a=>!a.isGift);const gf=(r.selectedApps||[]).filter(a=>a.isGift);pd.forEach((a,i)=>{l.push((i+1)+". "+a.name+" "+fmtPrice(getP(a,cur),cur));(a.links||[]).forEach(lk=>l.push("   "+lk.url));});if(gf.length){l.push("\n--- REGALOS ---");gf.forEach(a=>{l.push("* "+a.name+" - GRATIS");(a.links||[]).forEach(lk=>l.push("   "+lk.url));});}if((r.customRequests||[]).length){l.push("\n--- SOLICITUDES ---");r.customRequests.forEach(cr=>l.push("* "+cr.name+(cr.note?" - "+cr.note:"")));}l.push("---\nTOTAL: "+fmtPrice(r.total||0,cur));if(r.pendingAmount>0)l.push("PENDIENTE: "+fmtPrice(r.pendingAmount,cur));return l.join("\n");}
+  function genExp(r){const l=[];l.push("SOPORTE SONORO - #"+(r.budgetNumber||""));l.push("Cliente: "+(r.clientName||"")+" | "+fmtDateTime(r.timestamp));l.push("---");const pd=(r.selectedApps||[]).filter(a=>!a.isGift);const gf=(r.selectedApps||[]).filter(a=>a.isGift);pd.forEach((a,i)=>{l.push((i+1)+". "+a.name+" $"+(a.price||0).toLocaleString("es-AR"));(a.links||[]).forEach(lk=>l.push("   "+lk.url));});if(gf.length){l.push("\n--- REGALOS ---");gf.forEach(a=>{l.push("* "+a.name+" - GRATIS");(a.links||[]).forEach(lk=>l.push("   "+lk.url));});}if((r.customRequests||[]).length){l.push("\n--- SOLICITUDES ---");r.customRequests.forEach(cr=>l.push("* "+cr.name+(cr.note?" - "+cr.note:"")));}l.push("---\nTOTAL: $"+(r.total||0).toLocaleString("es-AR")+(r.paymentCurrency?" ("+r.paymentCurrency+")":""));if(r.pendingAmount>0)l.push("PENDIENTE: $"+r.pendingAmount.toLocaleString("es-AR"));return l.join("\n");}
   function doCopy(t){copyText(t);setCopied(true);setTimeout(()=>setCopied(false),2e3);}
+  async function createSes(){const c=shortCode();try{let ctr=1;try{const r=await window.storage.get(BCK);if(r?.value)ctr=JSON.parse(r.value);}catch{}await window.storage.set(BCK,JSON.stringify(ctr+1));await window.storage.set("ss-ses-"+c,JSON.stringify({catalog:apps,promo:{every:pEvery,mode:pMode},payments,giftPool:apps.filter(a=>a.giftEligible),offers:offers.filter(o=>o.active),nextBudget:ctr}),true);setSesCode(c);}catch{}}
 
-  async function createSes(){const c=shortCode();try{let ctr=1;try{const r=await window.storage.get(BCK);if(r?.value)ctr=JSON.parse(r.value);}catch{}await window.storage.set(BCK,JSON.stringify(ctr+1));
-    let sesApps=apps;const pkg=sesPkgId?packages.find(p=>p.id===sesPkgId):null;
-    if(pkg){const pkgMap=new Map(pkg.items.map(i=>[i.id,i]));sesApps=apps.filter(a=>pkgMap.has(a.id)).map(a=>{const pi=pkgMap.get(a.id);return{...a,price:pi.customPrice||a.price,priceUsd:pi.customPriceUsd||a.priceUsd||0};});}
-    await window.storage.set("ss-ses-"+c,JSON.stringify({catalog:sesApps,promo:{every:pEvery,mode:pMode},payments,giftPool:sesApps.filter(a=>a.giftEligible),offers:offers.filter(o=>o.active),nextBudget:ctr,currency:sesCurrency,packageName:pkg?.name||null,adminPhone:adminCfg.phone||null}),true);setSesCode(c);}catch{}}
-
+  // Filtered responses
   const filtResps=resps.filter(r=>{const mS=!respSearch||(r.clientName||"").toLowerCase().includes(respSearch.toLowerCase())||(r.clientEmail||"").toLowerCase().includes(respSearch.toLowerCase())||(r.budgetNumber||"").toLowerCase().includes(respSearch.toLowerCase())||fmtDate(r.timestamp).includes(respSearch);const mF=respFilter==="all"||(respFilter==="unpaid"&&r.pendingAmount>0)||(respFilter==="paid"&&(r.status==="accepted"||r.status==="installed")&&!r.pendingAmount)||(respFilter==="pending"&&(!r.status||r.status==="pending"));return mS&&mF;});
+
+  // Emails
   const allEmails=[...new Set(resps.map(r=>r.clientEmail).filter(Boolean))];
   function runSorteo(){const sh=[...allEmails].sort(()=>Math.random()-0.5);setSorteoResult(sh.slice(0,Math.min(sorteoCount,sh.length)));}
 
+  // Referral stats
   const refMap={};resps.forEach(r=>{if(r.referralCode){if(!refMap[r.referralCode])refMap[r.referralCode]={code:r.referralCode,uses:0,names:[]};refMap[r.referralCode].uses++;refMap[r.referralCode].names.push(r.clientName||"");}});
   const refOwners={};resps.forEach(r=>{if(r.myReferralCode)refOwners[r.myReferralCode]=r.clientName||r.clientEmail||"";});
   const refList=Object.values(refMap).sort((a,b)=>b.uses-a.uses);
 
+  // Stats
   const acc=resps.filter(r=>r.status==="accepted"||r.status==="installed");
   const totalRev=acc.reduce((s,r)=>s+(r.total||0),0);
   const totalPending=resps.filter(r=>r.pendingAmount>0).reduce((s,r)=>s+(r.pendingAmount||0),0);
@@ -181,24 +171,18 @@ function AdminPanel({onBack}){
   const pluginData=(()=>{const m={};acc.forEach(r=>(r.selectedApps||[]).forEach(a=>{if(!m[a.name])m[a.name]={name:a.name,count:0,rev:0};m[a.name].count++;if(!a.isGift)m[a.name].rev+=(a.price||0);}));return Object.values(m).sort((a,b)=>b.count-a.count).slice(0,10);})();
   const osData=(()=>{const m={windows:0,mac:0,both:0};acc.forEach(r=>{const o=r.osFilter||"both";m[o]=(m[o]||0)+(r.total||0);});return Object.entries(m).filter(([_,v])=>v>0).map(([k,v])=>({name:k==="windows"?"Windows":k==="mac"?"macOS":"Ambos",value:v}));})();
 
-  async function sendNewsletter(){if(!nlSubject.trim()||!nlBody.trim()||allEmails.length===0)return;setNlSending(true);setNlResult("");
-    const pluginCards=nlSelPlugins.size>0?apps.filter(a=>nlSelPlugins.has(a.id)).map(a=>`<div style="display:inline-block;width:200px;margin:8px;padding:14px;border-radius:10px;border:1.5px solid #e2e2e8;background:#fff;text-align:center;vertical-align:top"><div style="font-weight:800;font-size:14px;color:#4f46e5;margin-bottom:4px">${a.name}</div><div style="font-size:11px;color:#888;margin-bottom:4px">${a.category||""}</div><div style="font-weight:700;font-size:16px;color:#059669">$${(a.price||0).toLocaleString("es-AR")}</div>${a.priceUsd?`<div style="font-size:11px;color:#888">US$${a.priceUsd.toLocaleString("es-AR")}</div>`:""}</div>`).join(""):"";
-    const html=`<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px"><div style="text-align:center;font-weight:800;font-size:18px;color:#4f46e5;letter-spacing:2px;margin-bottom:16px">SOPORTE SONORO</div><div style="font-size:14px;line-height:1.7;color:#333;margin-bottom:20px">${nlBody.replace(/\n/g,"<br/>")}</div>${pluginCards?`<div style="text-align:center;margin:20px 0">${pluginCards}</div>`:""}<div style="border-top:1px solid #eee;padding-top:12px;text-align:center;font-size:11px;color:#999">Soporte Sonoro | produccionmusicaargentina@gmail.com</div></div>`;
-    try{const res=await fetch("/.netlify/functions/notify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"newsletter",subject:nlSubject,html,recipients:allEmails})});if(res.ok)setNlResult("Enviado a "+allEmails.length+" contactos!");else setNlResult("Error: "+await res.text());}catch(e){setNlResult("Error de red. Configura Brevo (ver instrucciones).");}
-    setNlSending(false);}
-
   if(!loaded)return<div style={{padding:40,textAlign:"center",color:"#888"}}>...</div>;
   return(<div style={{fontFamily:"'Inter',system-ui,sans-serif",maxWidth:780,margin:"0 auto",padding:"10px 10px 60px"}}>
     <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:12,flexWrap:"wrap"}}>
       <button onClick={onBack} style={{background:"#fee2e2",border:"none",borderRadius:6,padding:"5px 10px",cursor:"pointer",fontSize:11,fontWeight:600,color:"#991b1b"}}>Salir</button>
       <div style={{fontSize:13,fontWeight:800,flex:"1 1 40px",color:"#4f46e5",letterSpacing:1}}>SS</div>
-      {["catalog","promo","offers","packages","session","share","payment","responses","newsletter","referrals","sorteo","stats"].map(t=>(<button key={t} style={tB(tab===t)} onClick={()=>{setTab(t);setShowExp(false);setViewR(null);if(["responses","stats","referrals","sorteo","newsletter"].includes(t))loadResps();}}>{{catalog:"Cat",promo:"Pr",offers:"Of",packages:"Paq",session:"Trab",share:"Cod",payment:"Pay",responses:"Pres",newsletter:"Mail",referrals:"Ref",sorteo:"Sort",stats:"Stat"}[t]}</button>))}
+      {["catalog","promo","offers","session","share","payment","responses","newsletter","referrals","sorteo","stats"].map(t=>(<button key={t} style={tB(tab===t)} onClick={()=>{setTab(t);setShowExp(false);setViewR(null);if(["responses","stats","referrals","sorteo","newsletter"].includes(t))loadResps();}}>{{catalog:"Cat",promo:"Pr",offers:"Of",session:"Trab",share:"Cod",payment:"Pay",responses:"Pres",newsletter:"Mail",referrals:"Ref",sorteo:"Sort",stats:"Stat"}[t]}</button>))}
     </div>
 
     {tab==="catalog"&&<div>
-      <div style={{display:"flex",gap:6,marginBottom:8,flexWrap:"wrap"}}><input style={{...inp,flex:1,minWidth:80}} placeholder="Buscar..." value={search} onChange={e=>setSearch(e.target.value)}/><button style={bP} onClick={()=>{setEditApp(null);setShowForm(true);}}>+</button><button style={bO} onClick={()=>fileRef.current?.click()}>XLS</button><input ref={fileRef} type="file" accept=".xlsx,.xls" hidden onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const wb=XLSX.read(ev.target.result,{type:"array"});const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""});const na=rows.map(r=>{const w=String(r.windows||"").toLowerCase(),m=String(r.macos||"").toLowerCase();let os="both";if(w==="si"&&m!=="si")os="windows";else if(m==="si"&&w!=="si")os="mac";return{id:uid(),name:String(r.Plugin||r.plugin||"").trim(),os,price:Number(r.valor||0),priceUsd:Number(r.usd||r.USD||0),category:"",giftEligible:false,links:[]};}).filter(a=>a.name);setApps(p=>[...p,...na]);}catch{}};r.readAsArrayBuffer(f);e.target.value="";}}/></div>
+      <div style={{display:"flex",gap:6,marginBottom:8,flexWrap:"wrap"}}><input style={{...inp,flex:1,minWidth:80}} placeholder="Buscar..." value={search} onChange={e=>setSearch(e.target.value)}/><button style={bP} onClick={()=>{setEditApp(null);setShowForm(true);}}>+</button><button style={bO} onClick={()=>fileRef.current?.click()}>XLS</button><input ref={fileRef} type="file" accept=".xlsx,.xls" hidden onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{try{const wb=XLSX.read(ev.target.result,{type:"array"});const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""});const na=rows.map(r=>{const w=String(r.windows||"").toLowerCase(),m=String(r.macos||"").toLowerCase();let os="both";if(w==="si"&&m!=="si")os="windows";else if(m==="si"&&w!=="si")os="mac";return{id:uid(),name:String(r.Plugin||r.plugin||"").trim(),os,price:Number(r.valor||0),category:"",giftEligible:false,links:[]};}).filter(a=>a.name);setApps(p=>[...p,...na]);}catch{}};r.readAsArrayBuffer(f);e.target.value="";}}/></div>
       <div style={{fontSize:11,color:"#888",marginBottom:6}}>{apps.length} items</div>
-      {filt.map(a=>(<div key={a.id} style={crd}><div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}><span style={{fontWeight:700,fontSize:12,flex:1}}>{a.name}</span><OsB os={a.os}/><span style={{fontSize:10,color:"#777",background:"#f3f4f6",padding:"1px 5px",borderRadius:3}}>{a.category}</span><span style={{fontWeight:700,color:"#4f46e5",fontSize:12}}>${(a.price||0).toLocaleString("es-AR")}</span>{a.priceUsd>0&&<span style={{fontSize:10,color:"#059669"}}>US${a.priceUsd}</span>}<button style={bS} onClick={()=>{setEditApp(a);setShowForm(true);}}>Ed</button><button style={{background:"none",border:"none",color:"#ccc",cursor:"pointer",fontSize:12}} onClick={()=>setApps(apps.filter(x=>x.id!==a.id))}>x</button></div></div>))}
+      {filt.map(a=>(<div key={a.id} style={crd}><div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}><span style={{fontWeight:700,fontSize:12,flex:1}}>{a.name}</span><OsB os={a.os}/><span style={{fontSize:10,color:"#777",background:"#f3f4f6",padding:"1px 5px",borderRadius:3}}>{a.category}</span><span style={{fontWeight:700,color:"#4f46e5",fontSize:12}}>${(a.price||0).toLocaleString("es-AR")}</span><button style={bS} onClick={()=>{setEditApp(a);setShowForm(true);}}>Ed</button><button style={{background:"none",border:"none",color:"#ccc",cursor:"pointer",fontSize:12}} onClick={()=>setApps(apps.filter(x=>x.id!==a.id))}>x</button></div></div>))}
     </div>}
 
     {tab==="promo"&&<div style={sec}><h3 style={{margin:"0 0 10px",fontSize:15}}>Promo</h3><div style={{display:"flex",alignItems:"center",gap:6,marginBottom:12}}><span>Cada</span><input type="number" min={2} max={20} value={pEvery} onChange={e=>setPEvery(Math.max(2,Number(e.target.value)||3))} style={{...inp,width:50,textAlign:"center",padding:"3px"}}/><span>apps = 1 gratis</span></div>
@@ -211,15 +195,6 @@ function AdminPanel({onBack}){
       {showOfferForm&&<OfferForm offer={editOffer} apps={apps} onSave={o=>{if(editOffer)setOffers(offers.map(x=>x.id===o.id?o:x));else setOffers([...offers,{...o,id:uid(),active:true}]);setShowOfferForm(false);setEditOffer(null);}} onCancel={()=>{setShowOfferForm(false);setEditOffer(null);}}/>}
     </div>}
 
-    {tab==="packages"&&<div>
-      <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}><h3 style={{margin:0,fontSize:15}}>Paquetes privados</h3><button style={bP} onClick={()=>{setEditPkg(null);setShowPkgForm(true);}}>+</button></div>
-      <p style={{fontSize:11,color:"#888",margin:"-4px 0 10px"}}>Crea paquetes para tus amigos/profes. Al generar un codigo, asigna un paquete. Solo ese cliente vera esos plugins.</p>
-      {packages.map(pk=>(<div key={pk.id} style={crd}><div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}><span style={{fontWeight:800,fontSize:13,flex:1,color:"#4f46e5"}}>{pk.name}</span><span style={{fontSize:11,color:"#888",background:"#f3f4f6",padding:"1px 6px",borderRadius:4}}>{pk.items.length} plugins</span><button style={bS} onClick={()=>{setEditPkg(pk);setShowPkgForm(true);}}>Ed</button><button style={{background:"none",border:"none",color:"#ccc",cursor:"pointer",fontSize:12}} onClick={()=>setPackages(packages.filter(x=>x.id!==pk.id))}>x</button></div>
-        <div style={{fontSize:11,color:"#888",marginTop:4}}>{pk.items.slice(0,5).map(i=>{const a=apps.find(x=>x.id===i.id);return a?.name||i.id;}).join(", ")}{pk.items.length>5?" +"+(pk.items.length-5)+" mas":""}</div>
-      </div>))}
-      {showPkgForm&&<PackageForm pkg={editPkg} apps={apps} onSave={pk=>{if(editPkg)setPackages(packages.map(x=>x.id===pk.id?pk:x));else setPackages([...packages,{...pk,id:uid()}]);setShowPkgForm(false);setEditPkg(null);}} onCancel={()=>{setShowPkgForm(false);setEditPkg(null);}}/>}
-    </div>}
-
     {tab==="session"&&!showExp&&<div>
       <div style={{display:"flex",gap:6,marginBottom:8,flexWrap:"wrap"}}>{["all","windows","mac"].map(o=><button key={o} style={tB(osF===o)} onClick={()=>setOsF(o)}>{o==="all"?"All":"Win/Mac".split("/")[o==="windows"?0:1]}</button>)}</div>
       <input style={{...inp,marginBottom:8}} placeholder="Buscar..." value={search} onChange={e=>setSearch(e.target.value)}/>
@@ -228,65 +203,32 @@ function AdminPanel({onBack}){
     </div>}
     {tab==="session"&&showExp&&<div><button style={{...bS,marginBottom:10}} onClick={()=>setShowExp(false)}>Volver</button><div style={sec}><textarea readOnly id="exp-ta" value={"SOPORTE SONORO\n---\n"+paid.map((a,i)=>(i+1)+". "+a.name+" $"+(a.price||0).toLocaleString("es-AR")+"\n"+(a.links||[]).map(l=>"   "+l.url).join("\n")).join("\n")+(gifts.length?"\n--- REGALOS ---\n"+gifts.map(a=>"* "+a.name+" GRATIS\n"+(a.links||[]).map(l=>"   "+l.url).join("\n")).join("\n"):"")+"\n---\nTOTAL: $"+totP.toLocaleString("es-AR")} style={{width:"100%",minHeight:180,fontFamily:"monospace",fontSize:11,padding:12,borderRadius:8,border:"1px solid #ddd",background:"#fff",resize:"vertical",boxSizing:"border-box"}}/><div style={{display:"flex",gap:8,marginTop:10}}><button style={bP} onClick={()=>doCopy(document.getElementById("exp-ta").value)}>{copied?"OK":"Copiar"}</button><button style={bO} onClick={()=>printText("SS",document.getElementById("exp-ta").value)}>Print</button></div></div></div>}
 
-    {tab==="payment"&&<div>
-      <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}><h3 style={{margin:0,fontSize:15}}>Pagos</h3><button style={bP} onClick={()=>setPayments([...payments,{id:uid(),label:"",alias:"",cbu:"",titular:"",banco:"",extra:""}])}>+</button></div>
+    {tab==="payment"&&<div><div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}><h3 style={{margin:0,fontSize:15}}>Pagos</h3><button style={bP} onClick={()=>setPayments([...payments,{id:uid(),label:"",alias:"",cbu:"",titular:"",banco:"",extra:""}])}>+</button></div>
       {payments.map(pm=>(<div key={pm.id} style={{...sec,position:"relative"}}>{payments.length>1&&<button onClick={()=>setPayments(payments.filter(p=>p.id!==pm.id))} style={{position:"absolute",top:8,right:10,background:"none",border:"none",color:"#ccc",cursor:"pointer"}}>x</button>}
         {[["Nombre *","label"],["Alias","alias"],["CBU","cbu"],["Titular","titular"],["Banco","banco"]].map(([l,k])=>(<div key={k}><label style={{...lbl,marginTop:k==="label"?0:undefined}}>{l}</label><input style={inp} value={pm[k]} onChange={e=>setPayments(payments.map(p=>p.id===pm.id?{...p,[k]:e.target.value}:p))}/></div>))}
         <label style={lbl}>Extra</label><textarea style={{...inp,minHeight:35,resize:"vertical"}} value={pm.extra} onChange={e=>setPayments(payments.map(p=>p.id===pm.id?{...p,extra:e.target.value}:p))}/>
-      </div>))}
-      <button style={bG} onClick={()=>{try{window.storage.set(PYK,JSON.stringify(payments))}catch{}}}>Guardar pagos</button>
+      </div>))}<button style={bG} onClick={()=>{try{window.storage.set(PYK,JSON.stringify(payments))}catch{}}}>Guardar</button></div>}
 
-      <div style={{...sec,marginTop:16}}>
-        <div style={{fontWeight:700,fontSize:13,marginBottom:8}}>Configuracion admin</div>
-        <label style={{...lbl,marginTop:0}}>WhatsApp admin (con codigo pais, ej: 5491155554444)</label>
-        <input style={inp} value={adminCfg.phone} onChange={e=>setAdminCfg({...adminCfg,phone:e.target.value})} placeholder="5491155554444"/>
-        <label style={lbl}>Email admin (para notificaciones)</label>
-        <input style={inp} value={adminCfg.email} onChange={e=>setAdminCfg({...adminCfg,email:e.target.value})}/>
-        <button style={{...bG,marginTop:10}} onClick={()=>{try{window.storage.set(CFGK,JSON.stringify(adminCfg))}catch{}}}>Guardar config</button>
-      </div>
-    </div>}
-
-    {tab==="share"&&<div style={sec}><h3 style={{margin:"0 0 8px",fontSize:15}}>Codigo de sesion</h3>
-      {!sesCode?<div>
-        <div style={{display:"flex",gap:8,marginBottom:10,flexWrap:"wrap"}}>
-          <div><label style={{fontSize:10,color:"#666",fontWeight:600}}>Moneda</label><div style={{display:"flex",gap:4,marginTop:3}}>{["ARS","USD"].map(c=><button key={c} style={tB(sesCurrency===c)} onClick={()=>setSesCurrency(c)}>{c}</button>)}</div></div>
-        </div>
-        <div style={{marginBottom:12}}>
-          <label style={{fontSize:10,color:"#666",fontWeight:600}}>Paquete (opcional)</label>
-          <select style={{...inp,marginTop:3}} value={sesPkgId} onChange={e=>setSesPkgId(e.target.value)}>
-            <option value="">Ninguno - catalogo completo</option>
-            {packages.map(p=><option key={p.id} value={p.id}>{p.name} ({p.items.length} plugins)</option>)}
-          </select>
-        </div>
-        {sesPkgId&&<div style={{background:"#f0fdf4",borderRadius:6,padding:8,marginBottom:10,fontSize:11,color:"#065f46",border:"1px solid #bbf7d0"}}>El cliente solo vera los plugins del paquete <strong>{packages.find(p=>p.id===sesPkgId)?.name}</strong></div>}
-        <button style={{...bP,padding:"10px 24px"}} onClick={createSes}>Generar codigo</button>
-      </div>:(<div>
-        <div style={{fontSize:26,fontWeight:800,letterSpacing:6,color:"#4f46e5",textAlign:"center",padding:"14px 0",background:"#eef2ff",borderRadius:10,marginBottom:6}}>{sesCode}</div>
-        <div style={{textAlign:"center",fontSize:11,color:"#888",marginBottom:10}}>{sesCurrency}{sesPkgId?" | "+packages.find(p=>p.id===sesPkgId)?.name:""}</div>
-        <div style={{display:"flex",gap:6}}><button style={bO} onClick={()=>doCopy(sesCode)}>{copied?"OK":"Copiar"}</button><button style={bO} onClick={()=>setSesCode("")}>Nuevo</button></div>
-      </div>)}
-    </div>}
+    {tab==="share"&&<div style={sec}><h3 style={{margin:"0 0 8px",fontSize:15}}>Codigo</h3>{!sesCode?<button style={{...bP,padding:"10px 24px"}} onClick={createSes}>Generar</button>:(<div><div style={{fontSize:26,fontWeight:800,letterSpacing:6,color:"#4f46e5",textAlign:"center",padding:"14px 0",background:"#eef2ff",borderRadius:10,marginBottom:10}}>{sesCode}</div><div style={{display:"flex",gap:6}}><button style={bO} onClick={()=>doCopy(sesCode)}>{copied?"OK":"Copiar"}</button><button style={bO} onClick={()=>setSesCode("")}>Nuevo</button></div></div>)}</div>}
 
     {tab==="responses"&&!viewR&&<div>
       <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}><input style={{...inp,flex:1,minWidth:100}} placeholder="Buscar nombre, email, fecha, #..." value={respSearch} onChange={e=>setRespSearch(e.target.value)}/><button style={bS} onClick={()=>loadResps()}>Actualizar</button></div>
       <div style={{display:"flex",gap:4,marginBottom:10,flexWrap:"wrap"}}>{[["all","Todos"],["pending","Nuevos"],["unpaid","Deben"],["paid","Pagados"]].map(([v,l])=><button key={v} style={tB(respFilter===v)} onClick={()=>setRespFilter(v)}>{l}</button>)}</div>
       {filtResps.length===0&&<div style={{textAlign:"center",color:"#bbb",padding:30}}>Sin resultados</div>}
-      {filtResps.map((r,i)=>(<div key={i} style={{...crd,padding:12,cursor:"pointer",borderLeft:"4px solid "+payColor(r)}} onClick={()=>setViewR(r)}><div style={{display:"flex",gap:5,alignItems:"center",flexWrap:"wrap"}}><span style={{fontWeight:800,fontSize:12,color:"#4f46e5"}}>#{r.budgetNumber}</span>{r.packageName&&<span style={{background:"#dbeafe",color:"#1e40af",padding:"1px 5px",borderRadius:4,fontSize:9}}>{r.packageName}</span>}{r.currency==="USD"&&<span style={{background:"#d1fae5",color:"#065f46",padding:"1px 5px",borderRadius:4,fontSize:9}}>USD</span>}{r.isGiftCard&&<span style={{background:"#a855f7",color:"#fff",padding:"1px 5px",borderRadius:4,fontSize:9}}>GIFT</span>}<span style={{fontWeight:600,flex:1,fontSize:12}}>{r.clientName}</span><span style={{fontSize:11,color:"#888"}}>{fmtDate(r.timestamp)}</span></div><div style={{display:"flex",gap:6,marginTop:3,fontSize:11,color:"#888"}}><span style={{fontWeight:700,color:"#333"}}>{fmtPrice(r.total||0,r.currency)}</span>{r.pendingAmount>0&&<span style={{color:"#ef4444",fontWeight:700}}>Debe: {fmtPrice(r.pendingAmount,r.currency)}</span>}{r.referralCode&&<span style={{color:"#7c3aed"}}>REF</span>}</div></div>))}
+      {filtResps.map((r,i)=>(<div key={i} style={{...crd,padding:12,cursor:"pointer",borderLeft:"4px solid "+payColor(r)}} onClick={()=>setViewR(r)}><div style={{display:"flex",gap:5,alignItems:"center",flexWrap:"wrap"}}><span style={{fontWeight:800,fontSize:12,color:"#4f46e5"}}>#{r.budgetNumber}</span>{r.isGiftCard&&<span style={{background:"#a855f7",color:"#fff",padding:"1px 5px",borderRadius:4,fontSize:9}}>GIFT</span>}<span style={{fontWeight:600,flex:1,fontSize:12}}>{r.clientName}</span><span style={{fontSize:11,color:"#888"}}>{fmtDate(r.timestamp)}</span></div><div style={{display:"flex",gap:6,marginTop:3,fontSize:11,color:"#888"}}><span style={{fontWeight:700,color:"#333"}}>${(r.total||0).toLocaleString("es-AR")}{r.paymentCurrency?" "+r.paymentCurrency:""}</span>{r.pendingAmount>0&&<span style={{color:"#ef4444",fontWeight:700}}>Debe: ${r.pendingAmount.toLocaleString("es-AR")}</span>}{r.referralCode&&<span style={{color:"#7c3aed"}}>REF</span>}</div></div>))}
     </div>}
     {tab==="responses"&&viewR&&<div><button style={{...bS,marginBottom:10}} onClick={()=>setViewR(null)}>Volver</button><div style={sec}>
-      <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:10,flexWrap:"wrap"}}><span style={{fontWeight:800,fontSize:15,color:"#4f46e5"}}>#{viewR.budgetNumber}</span>{viewR.packageName&&<span style={{background:"#dbeafe",color:"#1e40af",padding:"2px 6px",borderRadius:6,fontSize:11}}>{viewR.packageName}</span>}{viewR.currency==="USD"&&<span style={{background:"#d1fae5",color:"#065f46",padding:"2px 6px",borderRadius:6,fontSize:11}}>USD</span>}{viewR.isGiftCard&&<span style={{background:"#a855f7",color:"#fff",padding:"2px 6px",borderRadius:6,fontSize:11}}>GIFT</span>}<span style={{fontSize:11,padding:"2px 8px",borderRadius:6,fontWeight:600,background:payColor(viewR)+"20",color:payColor(viewR)}}>{viewR.status||"nuevo"}</span></div>
-      <div style={{fontSize:13,marginBottom:12,lineHeight:1.8}}>Cliente: <strong>{viewR.clientName}</strong><br/>Email: {viewR.clientEmail}{viewR.clientPhone&&<><br/>Tel: <strong>{viewR.clientPhone}</strong></>}<br/>Fecha: {fmtDateTime(viewR.timestamp)}<br/>OS: <OsB os={viewR.osFilter||"both"}/>{viewR.giftTo&&<><br/>Para: <strong>{viewR.giftTo}</strong></>}{viewR.referralCode&&<><br/>Ref: <strong>{viewR.referralCode}</strong></>}{viewR.refDiscount>0&&<><br/>Desc ref: <strong style={{color:"#059669"}}>-{fmtPrice(viewR.refDiscount,viewR.currency)}</strong></>}</div>
-
-      {viewR.clientPhone&&<a href={waLink(viewR.clientPhone,"Hola "+viewR.clientName+"! Soy de Soporte Sonoro, te escribo por tu presupuesto #"+viewR.budgetNumber)} target="_blank" rel="noopener noreferrer" style={{...bW,display:"inline-block",textDecoration:"none",marginBottom:10}}>WhatsApp al cliente</a>}
-
-      {(viewR.selectedApps||[]).map((a,j)=><div key={j} style={{padding:"5px 0",borderBottom:"1px solid #eee",display:"flex",gap:5,alignItems:"center",flexWrap:"wrap"}}><span style={{flex:1,fontWeight:600,fontSize:12}}>{a.name}</span>{a.isGift&&<Gift/>}<span style={{fontWeight:700,color:a.isGift?"#16a34a":"#4f46e5",fontSize:12}}>{a.isGift?"$0":fmtPrice(getP(a,viewR.currency),viewR.currency)}</span></div>)}
+      <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:10,flexWrap:"wrap"}}><span style={{fontWeight:800,fontSize:15,color:"#4f46e5"}}>#{viewR.budgetNumber}</span>{viewR.isGiftCard&&<span style={{background:"#a855f7",color:"#fff",padding:"2px 6px",borderRadius:6,fontSize:11}}>GIFT</span>}<span style={{fontSize:11,padding:"2px 8px",borderRadius:6,fontWeight:600,background:payColor(viewR)+"20",color:payColor(viewR)}}>{viewR.status||"nuevo"}</span></div>
+      <div style={{fontSize:13,marginBottom:12,lineHeight:1.8}}>Cliente: <strong>{viewR.clientName}</strong><br/>Email: {viewR.clientEmail}<br/>Fecha: {fmtDateTime(viewR.timestamp)}<br/>OS: <OsB os={viewR.osFilter||"both"}/>{viewR.giftTo&&<><br/>Para: <strong>{viewR.giftTo}</strong></>}{viewR.referralCode&&<><br/>Ref: <strong>{viewR.referralCode}</strong></>}{viewR.refDiscount>0&&<><br/>Desc ref: <strong style={{color:"#059669"}}>-${viewR.refDiscount.toLocaleString("es-AR")}</strong></>}</div>
+      {(viewR.selectedApps||[]).map((a,j)=><div key={j} style={{padding:"5px 0",borderBottom:"1px solid #eee",display:"flex",gap:5,alignItems:"center",flexWrap:"wrap"}}><span style={{flex:1,fontWeight:600,fontSize:12}}>{a.name}</span>{a.isGift&&<Gift/>}<span style={{fontWeight:700,color:a.isGift?"#16a34a":"#4f46e5",fontSize:12}}>{a.isGift?"$0":"$"+(a.price||0).toLocaleString("es-AR")}</span></div>)}
       {(viewR.customRequests||[]).length>0&&<div style={{marginTop:10,background:"#f5f3ff",borderRadius:6,padding:8,border:"1px solid #c4b5fd",fontSize:12}}>{viewR.customRequests.map((r,i)=><div key={i}><strong>{r.name}</strong>{r.note?" - "+r.note:""}</div>)}</div>}
-      <div style={{fontWeight:800,fontSize:16,color:"#4f46e5",margin:"12px 0"}}>Total: {fmtPrice(viewR.total||0,viewR.currency)}</div>
+      <div style={{fontWeight:800,fontSize:16,color:"#4f46e5",margin:"12px 0"}}>Total: ${(viewR.total||0).toLocaleString("es-AR")}</div>
 
+      {/* Payment edit */}
       <div style={{background:"#f0f9ff",borderRadius:8,padding:12,marginBottom:12,border:"1px solid #bae6fd"}}>
         <div style={{fontWeight:700,fontSize:13,marginBottom:8}}>Pago</div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
-          <div><label style={{fontSize:10,color:"#666"}}>Moneda</label><select style={{...inp,width:90}} value={viewR.paymentCurrency||viewR.currency||""} onChange={e=>updateResp(viewR,{paymentCurrency:e.target.value})}><option value="">--</option><option value="ARS">ARS</option><option value="USD">USD</option></select></div>
+          <div><label style={{fontSize:10,color:"#666"}}>Moneda</label><select style={{...inp,width:90}} value={viewR.paymentCurrency||""} onChange={e=>updateResp(viewR,{paymentCurrency:e.target.value})}><option value="">--</option><option value="ARS">ARS</option><option value="USD">USD</option></select></div>
           <div><label style={{fontSize:10,color:"#666"}}>Pendiente $</label><input style={{...inp,width:100}} type="number" value={viewR.pendingAmount||""} onChange={e=>updateResp(viewR,{pendingAmount:Number(e.target.value)||0})}/></div>
           <div><label style={{fontSize:10,color:"#666"}}>Fecha pago</label><input style={{...inp,width:140}} type="datetime-local" value={viewR.paymentDate||""} onChange={e=>updateResp(viewR,{paymentDate:e.target.value})}/></div>
         </div>
@@ -302,23 +244,16 @@ function AdminPanel({onBack}){
 
     {tab==="newsletter"&&<div>
       <h3 style={{margin:"0 0 10px",fontSize:15}}>Newsletter ({allEmails.length} emails)</h3>
-      <div style={sec}>
-        <p style={{fontSize:12,color:"#888",margin:"0 0 10px"}}>Envia newsletters con Brevo. Configura tu API key en Netlify (variable <code>BREVO_API_KEY</code>).</p>
-        <div style={{fontWeight:700,fontSize:13,marginBottom:8}}>Componer</div>
-        <label style={{...lbl,marginTop:0}}>Asunto</label><input style={inp} value={nlSubject} onChange={e=>setNlSubject(e.target.value)} placeholder="Nuevos plugins disponibles!"/>
-        <label style={lbl}>Mensaje</label><textarea style={{...inp,minHeight:80,resize:"vertical"}} value={nlBody} onChange={e=>setNlBody(e.target.value)} placeholder="Hola! Tenemos novedades..."/>
-        <label style={lbl}>Plugins destacados (opcionales, se generan cards)</label>
-        <div style={{maxHeight:140,overflow:"auto",border:"1px solid #eee",borderRadius:6,padding:6,marginBottom:8}}>{apps.map(a=><label key={a.id} style={{display:"flex",gap:5,padding:"2px 0",cursor:"pointer",fontSize:11}}><input type="checkbox" checked={nlSelPlugins.has(a.id)} onChange={()=>setNlSelPlugins(p=>{const n=new Set(p);n.has(a.id)?n.delete(a.id):n.add(a.id);return n;})}/><span style={{flex:1}}>{a.name}</span><span style={{color:"#888"}}>${(a.price||0).toLocaleString("es-AR")}</span></label>)}</div>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          <button style={{...bP,opacity:nlSending?.5:1}} onClick={sendNewsletter} disabled={nlSending||allEmails.length===0}>{nlSending?"Enviando...":"Enviar via Brevo ("+allEmails.length+")"}</button>
-          <button style={bO} onClick={()=>{if(!nlSubject.trim()||!nlBody.trim())return;window.open("mailto:?bcc="+allEmails.join(",")+"&subject="+encodeURIComponent(nlSubject)+"&body="+encodeURIComponent(nlBody),"_blank");}}>Abrir en mail</button>
-        </div>
-        {nlResult&&<p style={{fontSize:12,marginTop:8,color:nlResult.startsWith("Error")?"#ef4444":"#059669",fontWeight:600}}>{nlResult}</p>}
+      <div style={{...sec}}><p style={{fontSize:12,color:"#888",margin:"0 0 10px"}}>Base de emails de clientes. Para +50 contactos recomendamos <a href="https://www.brevo.com" target="_blank" rel="noopener noreferrer" style={{color:"#4f46e5",fontWeight:600}}>Brevo</a> (gratis hasta 300 emails/dia).</p>
+        <div style={{maxHeight:150,overflow:"auto",marginBottom:10}}>{allEmails.map((e,i)=><div key={i} style={{fontSize:12,padding:"3px 0",borderBottom:"1px solid #f0f0f0"}}>{e}</div>)}</div>
+        <button style={bO} onClick={()=>doCopy(allEmails.join("\n"))}>{copied?"OK":"Copiar emails"}</button>
       </div>
       <div style={sec}>
-        <div style={{fontWeight:700,fontSize:13,marginBottom:6}}>Emails registrados</div>
-        <div style={{maxHeight:150,overflow:"auto",marginBottom:8}}>{allEmails.map((e,i)=><div key={i} style={{fontSize:12,padding:"3px 0",borderBottom:"1px solid #f0f0f0"}}>{e}</div>)}</div>
-        <button style={bO} onClick={()=>doCopy(allEmails.join("\n"))}>{copied?"OK":"Copiar emails"}</button>
+        <div style={{fontWeight:700,fontSize:13,marginBottom:8}}>Enviar email masivo</div>
+        <label style={{...lbl,marginTop:0}}>Asunto</label><input style={inp} value={nlSubject} onChange={e=>setNlSubject(e.target.value)} placeholder="Nuevos plugins disponibles!"/>
+        <label style={lbl}>Mensaje</label><textarea style={{...inp,minHeight:80,resize:"vertical"}} value={nlBody} onChange={e=>setNlBody(e.target.value)} placeholder="Hola! Tenemos novedades..."/>
+        <button style={{...bP,marginTop:10}} onClick={()=>{if(!nlSubject.trim()||!nlBody.trim())return;window.open("mailto:?bcc="+allEmails.join(",")+"&subject="+encodeURIComponent(nlSubject)+"&body="+encodeURIComponent(nlBody),"_blank");}} disabled={allEmails.length===0}>Abrir en mail ({allEmails.length} dest.)</button>
+        <p style={{fontSize:11,color:"#888",marginTop:6}}>Se abre tu cliente de mail con todos los contactos en BCC (ocultos entre si). Para envios grandes usa Brevo.</p>
       </div>
     </div>}
 
@@ -348,51 +283,47 @@ function AdminPanel({onBack}){
   </div>);
 }
 
-// ====== CLIENT ======
+// ====== CLIENT (compact) ======
 function ClientPanel({code,onBack}){
   const[cat,setCat]=useState([]);const[promo,setPromo]=useState({every:3,mode:"cheapest"});const[payL,setPayL]=useState([]);const[gPool,setGPool]=useState([]);const[offers,setOffers]=useState([]);const[nBud,setNBud]=useState(1);const[loaded,setLoaded]=useState(false);
-  const[currency,setCurrency]=useState("ARS");const[pkgName,setPkgName]=useState(null);const[adminPhone,setAdminPhone]=useState(null);
   const[search,setSearch]=useState("");const[osF,setOsF]=useState(null);const[macVer,setMacVer]=useState(null);const[isGift,setIsGift]=useState(null);const[giftTo,setGiftTo]=useState("");const[giftFrom,setGiftFrom]=useState("");
   const[sel,setSel]=useState(new Set());const[gSel,setGSel]=useState(new Set());const[selOffers,setSelOffers]=useState(new Set());
-  const[cName,setCName]=useState("");const[cEmail,setCEmail]=useState("");const[cPhone,setCPhone]=useState("");const[done,setDone]=useState(false);const[budN,setBudN]=useState("");
+  const[cName,setCName]=useState("");const[cEmail,setCEmail]=useState("");const[done,setDone]=useState(false);const[budN,setBudN]=useState("");
   const[customReqs,setCustomReqs]=useState([]);const[showReqForm,setShowReqForm]=useState(false);const[reqName,setReqName]=useState("");const[reqNote,setReqNote]=useState("");
   const[refCode,setRefCode]=useState("");const[myRefCode,setMyRefCode]=useState("");const[catFilter,setCatFilter]=useState("Todos");const[giftSvg,setGiftSvg]=useState(null);
 
   useEffect(()=>{(async()=>{let data=null;try{const r=await window.storage.get("ss-ses-"+code,true);if(r?.value)data=JSON.parse(r.value);}catch{}
     if(!data){try{const r=await window.storage.get("swcat-session-"+code,true);if(r?.value)data=JSON.parse(r.value);}catch{}}
-    if(data){setCat(data.catalog||[]);setPromo(data.promo||{every:3,mode:"cheapest"});setPayL(data.payments||[]);setGPool(data.giftPool||[]);setOffers((data.offers||[]).filter(o=>isOfferActive(o)));setNBud(data.nextBudget||1);setCurrency(data.currency||"ARS");setPkgName(data.packageName||null);setAdminPhone(data.adminPhone||null);}setLoaded(true);})();},[code]);
+    if(data){setCat(data.catalog||[]);setPromo(data.promo||{every:3,mode:"cheapest"});setPayL(data.payments||[]);setGPool(data.giftPool||[]);setOffers((data.offers||[]).filter(o=>isOfferActive(o)));setNBud(data.nextBudget||1);}setLoaded(true);})();},[code]);
 
   const eOs=osF==="mac"?"mac":osF==="windows"?"windows":"all";
-  const gp=(a)=>getP(a,currency);const cs=currency==="USD"?"US$":"$";
   const filt=cat.filter(a=>(a.os===eOs||a.os==="both")&&(a.name.toLowerCase().includes(search.toLowerCase())||(a.category||"").toLowerCase().includes(search.toLowerCase()))&&(catFilter==="Todos"||a.category===catFilter));
   const selApps=cat.filter(a=>sel.has(a.id));let autoGift=new Set(),paid,maxPG=0;
-  if(promo.mode==="cheapest"){const mG=Math.floor(selApps.length/(promo.every+1));if(mG>0)[...selApps].sort((a,b)=>gp(a)-gp(b)).slice(0,mG).forEach(a=>autoGift.add(a.id));paid=selApps.filter(a=>!autoGift.has(a.id));}else{paid=selApps;maxPG=Math.floor(selApps.length/promo.every);}
-  const sub=paid.reduce((s,a)=>s+gp(a),0)+offers.filter(o=>selOffers.has(o.id)).reduce((s,o)=>s+(currency==="USD"?(o.priceUsd||o.price||0):(o.price||0)),0);
+  if(promo.mode==="cheapest"){const mG=Math.floor(selApps.length/(promo.every+1));if(mG>0)[...selApps].sort((a,b)=>a.price-b.price).slice(0,mG).forEach(a=>autoGift.add(a.id));paid=selApps.filter(a=>!autoGift.has(a.id));}else{paid=selApps;maxPG=Math.floor(selApps.length/promo.every);}
+  const sub=paid.reduce((s,a)=>s+(a.price||0),0)+offers.filter(o=>selOffers.has(o.id)).reduce((s,o)=>s+(o.price||0),0);
   const refDisc=refCode.trim()?Math.round(sub*0.1):0;const totP=sub-refDisc;
 
   async function submit(){const y=new Date().getFullYear(),num="PRES-"+y+"-"+String(nBud).padStart(4,"0"),mrc="REF-"+shortCode();setBudN(num);setMyRefCode(mrc);
-    const r={sessionCode:code,budgetNumber:num,clientName:cName.trim()||"Anonimo",clientEmail:cEmail.trim(),clientPhone:cPhone.trim(),osFilter:eOs,macVersion:macVer,isGiftCard:isGift===true,giftTo:giftTo.trim(),giftFrom:giftFrom.trim(),referralCode:refCode.trim().toUpperCase()||null,myReferralCode:mrc,refDiscount:refDisc,timestamp:new Date().toISOString(),status:"pending",pendingAmount:0,paymentCurrency:"",currency:currency,packageName:pkgName,selectedApps:selApps.map(a=>({...a,isGift:autoGift.has(a.id)})),selectedOffers:offers.filter(o=>selOffers.has(o.id)),giftSelections:gPool.filter(a=>gSel.has(a.id)),customRequests:customReqs,total:totP};
-    try{await window.storage.set("ss-resp-"+code+"-"+uid(),JSON.stringify(r),true);try{const c2=await window.storage.get(BCK);await window.storage.set(BCK,JSON.stringify((c2?.value?JSON.parse(c2.value):nBud)+1));}catch{}
+    const r={sessionCode:code,budgetNumber:num,clientName:cName.trim()||"Anonimo",clientEmail:cEmail.trim(),osFilter:eOs,macVersion:macVer,isGiftCard:isGift===true,giftTo:giftTo.trim(),giftFrom:giftFrom.trim(),referralCode:refCode.trim().toUpperCase()||null,myReferralCode:mrc,refDiscount:refDisc,timestamp:new Date().toISOString(),status:"pending",pendingAmount:0,paymentCurrency:"",selectedApps:selApps.map(a=>({...a,isGift:autoGift.has(a.id)})),selectedOffers:offers.filter(o=>selOffers.has(o.id)),giftSelections:gPool.filter(a=>gSel.has(a.id)),customRequests:customReqs,total:totP};
+    try{await window.storage.set("ss-resp-"+code+"-"+uid(),JSON.stringify(r),true);try{const c=await window.storage.get(BCK);await window.storage.set(BCK,JSON.stringify((c?.value?JSON.parse(c.value):nBud)+1));}catch{}
     try{await window.storage.set("ss-used-"+code,"1",true);}catch{}
-    // Notify admin
-    notifyAdmin({action:"notify",budgetNumber:num,clientName:cName.trim(),clientEmail:cEmail.trim(),clientPhone:cPhone.trim(),os:eOs,currency,total:totP,packageName:pkgName,plugins:selApps.map(a=>({name:a.name,price:gp(a),isGift:autoGift.has(a.id),links:a.links||[]})),customRequests:customReqs});
     if(isGift)setGiftSvg(generateGiftSVG(num,selApps,giftFrom.trim(),giftTo.trim()));setDone(true);}catch{alert("Error");}}
 
   if(!loaded)return<div style={{padding:40,textAlign:"center",color:"#888"}}>...</div>;
+
+  // Steps: OS > macVer > gift? > catalog > done
   const stepStyle={fontFamily:"'Inter',system-ui,sans-serif",maxWidth:400,margin:"0 auto",padding:"40px 16px",textAlign:"center"};
   const bigBtn=(onClick,label,border)=>(<button onClick={onClick} style={{padding:"22px 28px",borderRadius:14,border:"3px solid "+border,background:"#fff",cursor:"pointer",fontSize:14,fontWeight:700,flex:"1 1 130px",maxWidth:170}}>{label}</button>);
 
-  if(!osF)return(<div style={stepStyle}><button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer",color:"#999",marginBottom:14}}>Volver</button><div style={{fontSize:15,fontWeight:800,color:"#4f46e5",marginBottom:8}}>SOPORTE SONORO</div>{pkgName&&<div style={{background:"#dbeafe",color:"#1e40af",padding:"4px 10px",borderRadius:6,fontSize:12,fontWeight:600,marginBottom:12,display:"inline-block"}}>Paquete: {pkgName}</div>}<h2 style={{fontSize:17,marginBottom:20}}>Sistema operativo</h2><div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>{bigBtn(()=>setOsF("windows"),"Windows","#dbeafe")}{bigBtn(()=>setOsF("mac"),"macOS","#f3e8ff")}</div></div>);
-
+  if(!osF)return(<div style={stepStyle}><button onClick={onBack} style={{background:"none",border:"none",cursor:"pointer",color:"#999",marginBottom:14}}>Volver</button><div style={{fontSize:15,fontWeight:800,color:"#4f46e5",marginBottom:8}}>SOPORTE SONORO</div><h2 style={{fontSize:17,marginBottom:20}}>Sistema operativo</h2><div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>{bigBtn(()=>setOsF("windows"),"Windows","#dbeafe")}{bigBtn(()=>setOsF("mac"),"macOS","#f3e8ff")}</div></div>);
   if(osF==="mac"&&!macVer)return(<div style={stepStyle}><button onClick={()=>setOsF(null)} style={{background:"none",border:"none",cursor:"pointer",color:"#999",marginBottom:14}}>Cambiar</button><h2 style={{fontSize:17,marginBottom:20}}>Version macOS</h2><div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>{bigBtn(()=>setMacVer("new"),"Monterey+","#d1fae5")}{bigBtn(()=>setMacVer("old"),"Big Sur-","#fef3c7")}</div></div>);
   if(isGift===null)return(<div style={stepStyle}><button onClick={()=>{if(osF==="mac")setMacVer(null);else setOsF(null);}} style={{background:"none",border:"none",cursor:"pointer",color:"#999",marginBottom:14}}>Atras</button><h2 style={{fontSize:17,marginBottom:20}}>Para vos o para regalar?</h2><div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap"}}>{bigBtn(()=>setIsGift(false),"Para mi","#d1fae5")}{bigBtn(()=>setIsGift(true),"Regalar","#e9d5ff")}</div></div>);
 
   if(done){const isWin=eOs==="windows",adUrl=isWin?"https://anydesk.com/es/downloads/thank-you?dv=win_exe":macVer==="new"?"https://anydesk.com/es/downloads/thank-you?dv=mac_dmg":"https://download.anydesk.com/macos/10.12_Sierra/anydesk_v7.0.2.dmg",vidUrl=isWin?null:macVer==="new"?"https://www.youtube.com/watch?v=aeAMm3YdCRI":"https://www.youtube.com/watch?v=qHBgGAWb-jE";
   return(<div style={{fontFamily:"system-ui",maxWidth:480,margin:"0 auto",padding:"20px 14px"}}>
-    <div style={{textAlign:"center",marginBottom:14}}><div style={{fontWeight:800,color:"#4f46e5",letterSpacing:1,fontSize:13}}>SOPORTE SONORO</div><h2 style={{margin:"6px 0",fontSize:17}}>{isGift?"Gift Card lista!":"Presupuesto enviado!"}</h2><div style={{fontSize:18,fontWeight:800,color:"#4f46e5"}}>#{budN}</div><p style={{color:"#666",fontSize:13}}>Total: <strong>{fmtPrice(totP,currency)}</strong></p></div>
+    <div style={{textAlign:"center",marginBottom:14}}><div style={{fontWeight:800,color:"#4f46e5",letterSpacing:1,fontSize:13}}>SOPORTE SONORO</div><h2 style={{margin:"6px 0",fontSize:17}}>{isGift?"Gift Card lista!":"Presupuesto enviado!"}</h2><div style={{fontSize:18,fontWeight:800,color:"#4f46e5"}}>#{budN}</div><p style={{color:"#666",fontSize:13}}>Total: <strong>${totP.toLocaleString("es-AR")}</strong></p></div>
     {isGift&&giftSvg&&<div style={{marginBottom:14}}><div dangerouslySetInnerHTML={{__html:giftSvg}} style={{borderRadius:10,overflow:"hidden",boxShadow:"0 4px 20px rgba(0,0,0,.2)",marginBottom:8}}/><button style={{...bP,width:"100%",padding:"10px",background:"#7c3aed"}} onClick={()=>{const b=new Blob([giftSvg],{type:"image/svg+xml"}),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download="GiftCard-"+budN+".svg";a.click();URL.revokeObjectURL(u);}}>Descargar Gift Card</button></div>}
     <div style={{background:"#f5f3ff",borderRadius:8,padding:10,marginBottom:12,border:"1px solid #c4b5fd",textAlign:"center"}}><div style={{fontSize:11,color:"#666"}}>Tu codigo de referido (10% off):</div><div style={{fontSize:16,fontWeight:800,color:"#7c3aed",letterSpacing:3}}>{myRefCode}</div></div>
-    {adminPhone&&<a href={waLink(adminPhone,"Hola! Soy "+(cName||"")+".\nPresupuesto: #"+budN+"\nQuiero coordinar la instalacion.")} target="_blank" rel="noopener noreferrer" style={{display:"block",padding:"10px",background:"#25D366",color:"#fff",borderRadius:8,fontWeight:700,textAlign:"center",textDecoration:"none",marginBottom:8,fontSize:13}}>Coordinar por WhatsApp</a>}
     {payL.length>0&&<div style={{background:"#f0fdf4",borderRadius:10,padding:12,border:"1.5px solid #bbf7d0",marginBottom:12}}><div style={{fontWeight:700,fontSize:13,marginBottom:6}}>Medios de pago</div>{payL.filter(p=>p.alias||p.label).map((pm,i)=>(<div key={i} style={{background:"#fff",borderRadius:6,padding:"6px 8px",marginBottom:4,border:"1px solid #d1fae5",fontSize:12}}><strong style={{color:"#065f46"}}>{pm.label}</strong>{pm.alias&&<span> | Alias: <strong>{pm.alias}</strong></span>}{pm.cbu&&<span> | CBU: {pm.cbu}</span>}</div>))}</div>}
     {!isGift&&<div style={{background:"#eef2ff",borderRadius:10,padding:12,border:"1.5px solid #c7d2fe",marginBottom:12}}><div style={{fontWeight:700,fontSize:13,marginBottom:6,color:"#4f46e5"}}>Prepara tu equipo</div>
       <a href={adUrl} target="_blank" rel="noopener noreferrer" style={{display:"block",padding:"8px",background:"#ef4444",color:"#fff",borderRadius:8,fontWeight:700,textAlign:"center",textDecoration:"none",marginBottom:8,fontSize:13}}>Descargar AnyDesk</a>
@@ -402,30 +333,29 @@ function ClientPanel({code,onBack}){
 
   const availCats=[...new Set(cat.filter(a=>a.os===eOs||a.os==="both").map(a=>a.category||"Otro"))];
   return(<div style={{fontFamily:"system-ui",maxWidth:680,margin:"0 auto",padding:"10px 10px 80px"}}>
-    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><button onClick={()=>setIsGift(null)} style={{background:"none",border:"none",fontSize:14,cursor:"pointer",color:"#999"}}>{"<"}</button><div style={{fontSize:14,fontWeight:800,flex:1,color:"#4f46e5"}}>SOPORTE SONORO</div><OsB os={eOs}/>{isGift&&<span style={{background:"#a855f7",color:"#fff",padding:"1px 6px",borderRadius:4,fontSize:10,fontWeight:700}}>GIFT</span>}{currency==="USD"&&<span style={{background:"#d1fae5",color:"#065f46",padding:"1px 6px",borderRadius:4,fontSize:10,fontWeight:700}}>USD</span>}</div>
-    {pkgName&&<div style={{background:"#dbeafe",color:"#1e40af",padding:"4px 10px",borderRadius:6,fontSize:11,fontWeight:600,marginBottom:8,textAlign:"center"}}>Paquete: {pkgName}</div>}
+    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><button onClick={()=>setIsGift(null)} style={{background:"none",border:"none",fontSize:14,cursor:"pointer",color:"#999"}}>{"<"}</button><div style={{fontSize:14,fontWeight:800,flex:1,color:"#4f46e5"}}>SOPORTE SONORO</div><OsB os={eOs}/>{isGift&&<span style={{background:"#a855f7",color:"#fff",padding:"1px 6px",borderRadius:4,fontSize:10,fontWeight:700}}>GIFT</span>}</div>
     <div style={{background:"#fffbeb",padding:"6px 10px",borderRadius:6,fontSize:11,marginBottom:10,color:"#92400e",border:"1px solid #fde68a"}}><strong>Promo:</strong> cada {promo.mode==="cheapest"?promo.every+1:promo.every} apps, {promo.mode==="cheapest"?"la mas barata gratis":"elegis 1 de regalo"}</div>
 
     {offers.length>0&&<div style={{marginBottom:12}}>{offers.map(o=>{const isSel=selOffers.has(o.id),disc=o.originalPrice>0&&o.price>0?Math.round((1-o.price/o.originalPrice)*100):0;return(<div key={o.id} style={{...crd,borderColor:isSel?"#ef4444":"#fca5a5",background:isSel?"#fef2f2":"#fff",border:isSel?"2px solid #ef4444":"2px solid #fca5a5"}} onClick={()=>setSelOffers(p=>{const n=new Set(p);n.has(o.id)?n.delete(o.id):n.add(o.id);return n;})}>
-      <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",cursor:"pointer"}}><input type="checkbox" checked={isSel} onChange={()=>{}}/>{o.isSuper&&<span style={{background:"#ef4444",color:"#fff",padding:"1px 6px",borderRadius:4,fontSize:9,fontWeight:800}}>SUPER</span>}<span style={{fontWeight:800,flex:1,color:"#ef4444",fontSize:13}}>{o.name}</span><span style={{fontWeight:800,color:"#ef4444"}}>{fmtPrice(currency==="USD"?(o.priceUsd||o.price):o.price,currency)}</span>{disc>0&&<span style={{background:"#dcfce7",color:"#166534",padding:"1px 5px",borderRadius:4,fontSize:10,fontWeight:800}}>-{disc}%</span>}</div>
+      <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",cursor:"pointer"}}><input type="checkbox" checked={isSel} onChange={()=>{}}/>{o.isSuper&&<span style={{background:"#ef4444",color:"#fff",padding:"1px 6px",borderRadius:4,fontSize:9,fontWeight:800}}>SUPER</span>}<span style={{fontWeight:800,flex:1,color:"#ef4444",fontSize:13}}>{o.name}</span><span style={{fontWeight:800,color:"#ef4444"}}>${(o.price||0).toLocaleString("es-AR")}</span>{disc>0&&<span style={{background:"#dcfce7",color:"#166534",padding:"1px 5px",borderRadius:4,fontSize:10,fontWeight:800}}>-{disc}%</span>}</div>
       {o.endDate&&<div style={{marginLeft:22,marginTop:2}}><Countdown endDate={o.endDate}/></div>}
     </div>);})}</div>}
 
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}><div><label style={{fontSize:10,color:"#666"}}>Nombre *</label><input style={inp} value={cName} onChange={e=>setCName(e.target.value)}/></div><div><label style={{fontSize:10,color:"#666"}}>Email *</label><input style={inp} type="email" value={cEmail} onChange={e=>setCEmail(e.target.value)}/></div></div>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}><div><label style={{fontSize:10,color:"#666"}}>Telefono (opcional)</label><input style={inp} value={cPhone} onChange={e=>setCPhone(e.target.value)} placeholder="+54 11 5555-4444"/></div><div><label style={{fontSize:10,color:"#666"}}>Codigo referido (10% off)</label><input style={inp} value={refCode} onChange={e=>setRefCode(e.target.value)} placeholder="REF-XXXXXX"/></div></div>
     {isGift&&<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}><div><label style={{fontSize:10,color:"#666"}}>De</label><input style={inp} value={giftFrom} onChange={e=>setGiftFrom(e.target.value)}/></div><div><label style={{fontSize:10,color:"#666"}}>Para</label><input style={inp} value={giftTo} onChange={e=>setGiftTo(e.target.value)}/></div></div>}
+    <div style={{marginBottom:8}}><label style={{fontSize:10,color:"#666"}}>Codigo referido (10% off)</label><input style={{...inp,maxWidth:180}} value={refCode} onChange={e=>setRefCode(e.target.value)} placeholder="REF-XXXXXX"/></div>
 
     <div style={{display:"flex",gap:3,marginBottom:6,flexWrap:"wrap"}}>{["Todos",...availCats].filter((v,i,a)=>a.indexOf(v)===i).map(c=><button key={c} style={{...tB(catFilter===c),fontSize:9,padding:"4px 7px"}} onClick={()=>setCatFilter(c)}>{c}</button>)}</div>
     <input style={{...inp,marginBottom:8}} placeholder="Buscar..." value={search} onChange={e=>setSearch(e.target.value)}/>
 
-    {filt.map(a=>{const is=sel.has(a.id),ig=autoGift.has(a.id);return(<div key={a.id} style={ig?crdG:is?crdSel:crd}><div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}><input type="checkbox" checked={is} onChange={()=>setSel(p=>{const n=new Set(p);n.has(a.id)?n.delete(a.id):n.add(a.id);return n;})} style={{width:15,height:15}}/><span style={{fontWeight:700,fontSize:12,flex:1,cursor:"pointer"}} onClick={()=>setSel(p=>{const n=new Set(p);n.has(a.id)?n.delete(a.id):n.add(a.id);return n;})}>{a.name}</span>{ig&&<Gift/>}<OsB os={a.os}/><span style={{fontSize:10,color:"#777",background:"#f3f4f6",padding:"1px 4px",borderRadius:3}}>{a.category}</span><span style={{fontWeight:700,color:ig?"#16a34a":"#4f46e5",fontSize:12,textDecoration:ig?"line-through":"none"}}>{fmtPrice(gp(a),currency)}</span></div></div>);})}
+    {filt.map(a=>{const is=sel.has(a.id),ig=autoGift.has(a.id);return(<div key={a.id} style={ig?crdG:is?crdSel:crd}><div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap"}}><input type="checkbox" checked={is} onChange={()=>setSel(p=>{const n=new Set(p);n.has(a.id)?n.delete(a.id):n.add(a.id);return n;})} style={{width:15,height:15}}/><span style={{fontWeight:700,fontSize:12,flex:1,cursor:"pointer"}} onClick={()=>setSel(p=>{const n=new Set(p);n.has(a.id)?n.delete(a.id):n.add(a.id);return n;})}>{a.name}</span>{ig&&<Gift/>}<OsB os={a.os}/><span style={{fontSize:10,color:"#777",background:"#f3f4f6",padding:"1px 4px",borderRadius:3}}>{a.category}</span><span style={{fontWeight:700,color:ig?"#16a34a":"#4f46e5",fontSize:12,textDecoration:ig?"line-through":"none"}}>${(a.price||0).toLocaleString("es-AR")}</span></div></div>);})}
     <button style={{...bO,width:"100%",padding:"7px",fontSize:11,borderStyle:"dashed",marginTop:8,marginBottom:6}} onClick={()=>setShowReqForm(true)}>+ Pedir algo que no esta</button>
     {showReqForm&&<div style={{...sec,marginBottom:8}}><input style={inp} value={reqName} onChange={e=>setReqName(e.target.value)} placeholder="Plugin..." autoFocus/><input style={{...inp,marginTop:6}} value={reqNote} onChange={e=>setReqNote(e.target.value)} placeholder="Nota"/><div style={{display:"flex",gap:6,marginTop:8}}><button style={bG} onClick={()=>{if(reqName.trim()){setCustomReqs(p=>[...p,{id:uid(),name:reqName.trim(),note:reqNote.trim()}]);setReqName("");setReqNote("");setShowReqForm(false);}}}>OK</button><button style={bO} onClick={()=>{setShowReqForm(false);setReqName("");setReqNote("");}}>X</button></div></div>}
     {customReqs.map(r=>(<div key={r.id} style={{...crd,borderStyle:"dashed",borderColor:"#c4b5fd",display:"flex",gap:5,alignItems:"center"}}><span style={{flex:1,fontSize:12}}><strong>{r.name}</strong>{r.note?" - "+r.note:""}</span><button onClick={()=>setCustomReqs(p=>p.filter(x=>x.id!==r.id))} style={{background:"none",border:"none",color:"#ccc",cursor:"pointer"}}>x</button></div>))}
 
     {(sel.size>0||selOffers.size>0||customReqs.length>0)&&<div style={{position:"sticky",bottom:0,background:"#f0f0ff",borderRadius:10,padding:"10px 12px",marginTop:10,borderTop:"2px solid #4f46e5"}}>
-      {refDisc>0&&<div style={{fontSize:12,color:"#059669",fontWeight:600,marginBottom:4}}>Referido -10%: -{fmtPrice(refDisc,currency)}</div>}
-      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><span style={{fontWeight:700,fontSize:14,flex:1}}>Total: {fmtPrice(totP,currency)}</span></div>
+      {refDisc>0&&<div style={{fontSize:12,color:"#059669",fontWeight:600,marginBottom:4}}>Referido -10%: -${refDisc.toLocaleString("es-AR")}</div>}
+      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}><span style={{fontWeight:700,fontSize:14,flex:1}}>Total: ${totP.toLocaleString("es-AR")}</span></div>
       <button style={{...bG,width:"100%",padding:"10px",fontSize:13,background:isGift?"#7c3aed":"#059669"}} onClick={submit} disabled={!cName.trim()||!cEmail.trim()}>{isGift?"Gift Card":"Enviar"}</button>
       {(!cName.trim()||!cEmail.trim())&&<div style={{fontSize:10,color:"#ef4444",marginTop:3,textAlign:"center"}}>Completa nombre y email</div>}
     </div>}
@@ -434,21 +364,20 @@ function ClientPanel({code,onBack}){
 
 // ====== FORMS ======
 function AppForm({app,onSave,onCancel}){
-  const[n,sN]=useState(app?.name||"");const[os,sO]=useState(app?.os||"both");const[pr,sP]=useState(app?.price||0);const[pu,sPU]=useState(app?.priceUsd||0);const[cat,sC]=useState(app?.category||"");const[ge,sGE]=useState(app?.giftEligible||false);const[lks,sL]=useState(app?.links?.length?app.links:[{type:"magnet",url:""}]);
+  const[n,sN]=useState(app?.name||"");const[os,sO]=useState(app?.os||"both");const[pr,sP]=useState(app?.price||0);const[cat,sC]=useState(app?.category||"");const[ge,sGE]=useState(app?.giftEligible||false);const[lks,sL]=useState(app?.links?.length?app.links:[{type:"magnet",url:""}]);
   return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1e3,padding:10}} onClick={onCancel}><div style={{background:"#fff",borderRadius:14,padding:"18px 14px",width:"100%",maxWidth:460,maxHeight:"90vh",overflow:"auto"}} onClick={e=>e.stopPropagation()}>
     <label style={{...lbl,marginTop:0}}>Nombre *</label><input style={inp} value={n} onChange={e=>sN(e.target.value)} autoFocus/>
     <label style={lbl}>Categoria</label><input style={inp} value={cat} onChange={e=>sC(e.target.value)}/>
     <label style={lbl}>OS</label><div style={{display:"flex",gap:6}}>{[["both","Ambos"],["windows","Win"],["mac","Mac"]].map(([v,l])=><button key={v} onClick={()=>sO(v)} style={{padding:"5px 10px",borderRadius:6,fontSize:11,fontWeight:600,cursor:"pointer",border:os===v?"2px solid #4f46e5":"2px solid #e2e2e8",background:os===v?"#eef2ff":"#fff"}}>{l}</button>)}</div>
-    <div style={{display:"flex",gap:8}}><div style={{flex:1}}><label style={lbl}>Precio ARS</label><input style={inp} type="number" value={pr||""} onChange={e=>sP(e.target.value)}/></div><div style={{flex:1}}><label style={lbl}>Precio USD</label><input style={inp} type="number" value={pu||""} onChange={e=>sPU(e.target.value)}/></div></div>
+    <label style={lbl}>Precio</label><input style={inp} type="number" value={pr||""} onChange={e=>sP(e.target.value)}/>
     <label style={{...lbl,display:"flex",alignItems:"center",gap:6,cursor:"pointer"}} onClick={()=>sGE(!ge)}><input type="checkbox" checked={ge} onChange={()=>{}}/><span>Elegible regalo</span></label>
     <label style={lbl}>Links</label>{lks.map((l,i)=><div key={i} style={{display:"flex",gap:4,marginBottom:4}}><select value={l.type} onChange={e=>sL(lks.map((x,j)=>j===i?{...x,type:e.target.value}:x))} style={{...inp,width:70,fontSize:11}}><option value="magnet">Mag</option><option value="drive">Drv</option><option value="direct">Dir</option></select><input style={{...inp,flex:1}} value={l.url} onChange={e=>sL(lks.map((x,j)=>j===i?{...x,url:e.target.value}:x))}/></div>)}
     <button onClick={()=>sL([...lks,{type:"magnet",url:""}])} style={{background:"none",border:"none",color:"#4f46e5",cursor:"pointer",fontSize:11}}>+ Link</button>
-    <div style={{display:"flex",gap:6,marginTop:16,justifyContent:"flex-end"}}><button onClick={onCancel} style={{padding:"7px 14px",borderRadius:6,border:"1.5px solid #ddd",background:"#fff",cursor:"pointer"}}>X</button><button onClick={()=>{if(!n.trim())return;onSave({id:app?.id,name:n.trim(),os,price:Number(pr)||0,priceUsd:Number(pu)||0,category:cat.trim(),giftEligible:ge,links:lks.filter(l=>l.url.trim())});}} style={bP}>OK</button></div>
+    <div style={{display:"flex",gap:6,marginTop:16,justifyContent:"flex-end"}}><button onClick={onCancel} style={{padding:"7px 14px",borderRadius:6,border:"1.5px solid #ddd",background:"#fff",cursor:"pointer"}}>X</button><button onClick={()=>{if(!n.trim())return;onSave({id:app?.id,name:n.trim(),os,price:Number(pr)||0,category:cat.trim(),giftEligible:ge,links:lks.filter(l=>l.url.trim())});}} style={bP}>OK</button></div>
   </div></div>);
 }
-
 function OfferForm({offer,apps,onSave,onCancel}){
-  const[n,sN]=useState(offer?.name||"");const[desc,sD]=useState(offer?.description||"");const[pr,sP]=useState(offer?.price||0);const[oP,sOP]=useState(offer?.originalPrice||0);const[prU,sPU]=useState(offer?.priceUsd||0);
+  const[n,sN]=useState(offer?.name||"");const[desc,sD]=useState(offer?.description||"");const[pr,sP]=useState(offer?.price||0);const[oP,sOP]=useState(offer?.originalPrice||0);
   const[pIds,sPIds]=useState(new Set((offer?.plugins||[]).map(p=>p.id)));const[isSuper,setIsSuper]=useState(offer?.isSuper||false);
   const[schDays,setSchDays]=useState(offer?.scheduleDays||[]);const[eom,setEom]=useState(offer?.endOfMonth||false);const[startD,setStartD]=useState(offer?.startDate||"");const[endD,setEndD]=useState(offer?.endDate||"");
   const dayN=["Do","Lu","Ma","Mi","Ju","Vi","Sa"];
@@ -456,7 +385,7 @@ function OfferForm({offer,apps,onSave,onCancel}){
     <div style={{fontWeight:700,fontSize:15,marginBottom:8}}>Oferta</div>
     <label style={{...lbl,marginTop:0}}>Nombre *</label><input style={inp} value={n} onChange={e=>sN(e.target.value)} autoFocus/>
     <label style={lbl}>Descripcion</label><textarea style={{...inp,minHeight:40,resize:"vertical"}} value={desc} onChange={e=>sD(e.target.value)}/>
-    <div style={{display:"flex",gap:8}}><div style={{flex:1}}><label style={lbl}>Precio ARS</label><input style={inp} type="number" value={pr||""} onChange={e=>sP(e.target.value)}/></div><div style={{flex:1}}><label style={lbl}>Original ARS</label><input style={inp} type="number" value={oP||""} onChange={e=>sOP(e.target.value)}/></div><div style={{flex:1}}><label style={lbl}>Precio USD</label><input style={inp} type="number" value={prU||""} onChange={e=>sPU(e.target.value)}/></div></div>
+    <div style={{display:"flex",gap:8}}><div style={{flex:1}}><label style={lbl}>Precio</label><input style={inp} type="number" value={pr||""} onChange={e=>sP(e.target.value)}/></div><div style={{flex:1}}><label style={lbl}>Original</label><input style={inp} type="number" value={oP||""} onChange={e=>sOP(e.target.value)}/></div></div>
     <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",marginTop:10,padding:"6px 10px",borderRadius:6,background:isSuper?"#fef2f2":"#fafafa",border:isSuper?"2px solid #ef4444":"2px solid #eee"}} onClick={()=>setIsSuper(!isSuper)}><input type="checkbox" checked={isSuper} onChange={()=>{}}/><span style={{fontWeight:600,fontSize:12,color:isSuper?"#ef4444":"#888"}}>SUPER OFERTA</span></label>
     <div style={{background:"#f8fafc",borderRadius:8,padding:10,marginTop:10,border:"1px solid #e2e2e8"}}>
       <div style={{display:"flex",gap:3,marginBottom:8,flexWrap:"wrap"}}>{dayN.map((d,i)=>(<button key={i} onClick={()=>setSchDays(p=>p.includes(i)?p.filter(x=>x!==i):[...p,i])} style={{padding:"3px 7px",borderRadius:4,fontSize:10,fontWeight:600,cursor:"pointer",border:schDays.includes(i)?"2px solid #4f46e5":"2px solid #eee",background:schDays.includes(i)?"#eef2ff":"#fff"}}>{d}</button>))}</div>
@@ -465,27 +394,6 @@ function OfferForm({offer,apps,onSave,onCancel}){
     </div>
     <label style={{...lbl,marginTop:12}}>Plugins ({pIds.size})</label>
     <div style={{maxHeight:140,overflow:"auto",border:"1px solid #eee",borderRadius:6,padding:6}}>{apps.map(a=><label key={a.id} style={{display:"flex",gap:5,padding:"2px 0",cursor:"pointer",fontSize:11}}><input type="checkbox" checked={pIds.has(a.id)} onChange={()=>sPIds(p=>{const n=new Set(p);n.has(a.id)?n.delete(a.id):n.add(a.id);return n;})}/><span style={{flex:1}}>{a.name}</span><span style={{color:"#888"}}>${(a.price||0).toLocaleString("es-AR")}</span></label>)}</div>
-    <div style={{display:"flex",gap:6,marginTop:14}}><button onClick={onCancel} style={{padding:"7px 14px",borderRadius:6,border:"1.5px solid #ddd",background:"#fff",cursor:"pointer"}}>X</button><button onClick={()=>{if(!n.trim())return;onSave({id:offer?.id,name:n.trim(),description:desc.trim(),price:Number(pr)||0,originalPrice:Number(oP)||0,priceUsd:Number(prU)||0,plugins:apps.filter(a=>pIds.has(a.id)),active:offer?.active??true,isSuper,scheduleDays:schDays,endOfMonth:eom,startDate:startD||null,endDate:endD||null});}} style={bP}>OK</button></div>
-  </div></div>);
-}
-
-function PackageForm({pkg,apps,onSave,onCancel}){
-  const[name,setName]=useState(pkg?.name||"");
-  const[items,setItems]=useState(new Set((pkg?.items||[]).map(i=>i.id)));
-  const[prices,setPrices]=useState(()=>{const m={};(pkg?.items||[]).forEach(i=>{m[i.id]={ars:i.customPrice||"",usd:i.customPriceUsd||""};});return m;});
-  const[search,setSearch]=useState("");
-  const filt=apps.filter(a=>a.name.toLowerCase().includes(search.toLowerCase()));
-  return(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1e3,padding:10}} onClick={onCancel}><div style={{background:"#fff",borderRadius:14,padding:"18px 14px",width:"100%",maxWidth:520,maxHeight:"90vh",overflow:"auto"}} onClick={e=>e.stopPropagation()}>
-    <div style={{fontWeight:700,fontSize:15,marginBottom:8}}>Paquete privado</div>
-    <label style={{...lbl,marginTop:0}}>Nombre *</label><input style={inp} value={name} onChange={e=>setName(e.target.value)} autoFocus placeholder="Ej: Boris, Frangaray"/>
-    <label style={lbl}>Plugins ({items.size} seleccionados)</label>
-    <input style={{...inp,marginBottom:6}} placeholder="Buscar plugin..." value={search} onChange={e=>setSearch(e.target.value)}/>
-    <div style={{maxHeight:280,overflow:"auto",border:"1px solid #eee",borderRadius:6,padding:6}}>
-      {filt.map(a=>{const ch=items.has(a.id);return(<div key={a.id} style={{padding:"4px 0",borderBottom:"1px solid #f5f5f5"}}>
-        <label style={{display:"flex",gap:5,cursor:"pointer",fontSize:12,alignItems:"center"}}><input type="checkbox" checked={ch} onChange={()=>{setItems(p=>{const n=new Set(p);n.has(a.id)?n.delete(a.id):n.add(a.id);return n;});}}/><span style={{flex:1,fontWeight:ch?700:400}}>{a.name}</span><OsB os={a.os}/><span style={{color:"#888",fontSize:10}}>${(a.price||0).toLocaleString("es-AR")}</span></label>
-        {ch&&<div style={{display:"flex",gap:4,marginLeft:22,marginTop:2}}><input style={{...inp,width:90,fontSize:10,padding:"3px 6px"}} type="number" placeholder={"ARS custom ("+a.price+")"} value={prices[a.id]?.ars||""} onChange={e=>setPrices(p=>({...p,[a.id]:{...p[a.id],ars:e.target.value}}))}/><input style={{...inp,width:90,fontSize:10,padding:"3px 6px"}} type="number" placeholder={"USD custom ("+(a.priceUsd||0)+")"} value={prices[a.id]?.usd||""} onChange={e=>setPrices(p=>({...p,[a.id]:{...p[a.id],usd:e.target.value}}))}/></div>}
-      </div>);})}
-    </div>
-    <div style={{display:"flex",gap:6,marginTop:14}}><button onClick={onCancel} style={{padding:"7px 14px",borderRadius:6,border:"1.5px solid #ddd",background:"#fff",cursor:"pointer"}}>X</button><button onClick={()=>{if(!name.trim()||items.size===0)return;onSave({id:pkg?.id,name:name.trim(),items:[...items].map(id=>({id,customPrice:Number(prices[id]?.ars)||null,customPriceUsd:Number(prices[id]?.usd)||null}))});}} style={bP}>OK</button></div>
+    <div style={{display:"flex",gap:6,marginTop:14}}><button onClick={onCancel} style={{padding:"7px 14px",borderRadius:6,border:"1.5px solid #ddd",background:"#fff",cursor:"pointer"}}>X</button><button onClick={()=>{if(!n.trim())return;onSave({id:offer?.id,name:n.trim(),description:desc.trim(),price:Number(pr)||0,originalPrice:Number(oP)||0,plugins:apps.filter(a=>pIds.has(a.id)),active:offer?.active??true,isSuper,scheduleDays:schDays,endOfMonth:eom,startDate:startD||null,endDate:endD||null});}} style={bP}>OK</button></div>
   </div></div>);
 }
