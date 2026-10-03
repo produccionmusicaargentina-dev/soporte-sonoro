@@ -71,22 +71,7 @@ function buildBudgetHtml(data) {
 }
 
 function buildNewsletterHtml(data) {
-  const { subject, message, plugins, currency } = data;
-  const cur = currency === "USD" ? "US$" : "$";
-  const cards = (plugins || [])
-    .map(
-      (p) => `
-    <div style="background:#1a1a2e;border-radius:12px;padding:20px;margin:12px 0;border:1px solid #333">
-      <h3 style="margin:0 0 8px;color:#4f8cff">${p.name}</h3>
-      <p style="margin:0 0 8px;color:#aaa;font-size:13px">${p.cat || "Plugin"}</p>
-      <p style="margin:0 0 12px;color:#ccc;font-size:14px">${p.desc || ""}</p>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:20px;font-weight:bold;color:#a259ff">${cur}${p.price?.toLocaleString() || 0}</span>
-        ${p.link ? `<a href="${p.link}" style="background:#4f8cff;color:#fff;padding:8px 16px;border-radius:6px;text-decoration:none;font-size:13px">Ver mas</a>` : ""}
-      </div>
-    </div>`
-    )
-    .join("");
+  const { subject, message, imageUrl } = data;
 
   return `
   <div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;background:#111;color:#eee;border-radius:12px;overflow:hidden">
@@ -95,8 +80,7 @@ function buildNewsletterHtml(data) {
     </div>
     <div style="padding:24px">
       ${message ? `<p style="font-size:15px;line-height:1.6;color:#ddd;margin-bottom:24px">${message}</p>` : ""}
-      <h2 style="color:#fff;font-size:18px;margin-bottom:16px">Plugins Destacados</h2>
-      ${cards}
+      ${imageUrl ? `<div style="text-align:center;margin:16px 0"><img src="${imageUrl}" alt="Newsletter" style="max-width:100%;border-radius:10px"/></div>` : ""}
     </div>
     <div style="background:#0a0a0a;padding:16px;text-align:center;font-size:12px;color:#666">
       <p>Soporte Sonoro - Catalogo de Plugins</p>
@@ -148,11 +132,11 @@ export const handler = async (event) => {
 
     } else if (action === "newsletter") {
       // Newsletter to list of emails
-      const { recipients, subject, message, plugins, currency, senderEmail, senderName } = body;
+      const { recipients, subject, message, imageUrl, senderEmail, senderName } = body;
       if (!recipients || !recipients.length) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: "recipients required" }) };
       }
-      const html = buildNewsletterHtml({ subject, message, plugins, currency });
+      const html = buildNewsletterHtml({ subject, message, imageUrl });
       const to = recipients.map((e) => (typeof e === "string" ? { email: e } : e));
       const sender = senderEmail
         ? { name: senderName || "Soporte Sonoro", email: senderEmail }

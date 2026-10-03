@@ -128,7 +128,7 @@ function AdminPanel({onBack}){
   const[offers,setOffers]=useState([]);const[showOfferForm,setShowOfferForm]=useState(false);const[editOffer,setEditOffer]=useState(null);
   const[copied,setCopied]=useState(false);const[sorteoCount,setSorteoCount]=useState(1);const[sorteoResult,setSorteoResult]=useState(null);
   const[respSearch,setRespSearch]=useState("");const[respFilter,setRespFilter]=useState("all");
-  const[nlSubject,setNlSubject]=useState("");const[nlBody,setNlBody]=useState("");const[nlSelPlugins,setNlSelPlugins]=useState(new Set());const[nlSending,setNlSending]=useState(false);const[nlResult,setNlResult]=useState("");const[nlEmails,setNlEmails]=useState(null);const[nlNewEmail,setNlNewEmail]=useState("");
+  const[nlSubject,setNlSubject]=useState("");const[nlBody,setNlBody]=useState("");const[nlImageUrl,setNlImageUrl]=useState("");const[nlSending,setNlSending]=useState(false);const[nlResult,setNlResult]=useState("");const[nlEmails,setNlEmails]=useState(null);const[nlNewEmail,setNlNewEmail]=useState("");
   const[statMode,setStatMode]=useState("month");
   const[packages,setPackages]=useState([]);const[showPkgForm,setShowPkgForm]=useState(false);const[editPkg,setEditPkg]=useState(null);
   const[sesCurrency,setSesCurrency]=useState("ARS");const[sesPkgId,setSesPkgId]=useState("");
@@ -183,7 +183,7 @@ function AdminPanel({onBack}){
 
   function getNlEmails(){return nlEmails!==null?nlEmails:allEmails;}
   async function sendNewsletter(){const ems=getNlEmails();if(!nlSubject.trim()||!nlBody.trim()||ems.length===0)return;setNlSending(true);setNlResult("");
-    try{const res=await fetch("/.netlify/functions/notify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"newsletter",subject:nlSubject,message:nlBody,currency:"ARS",plugins:apps.filter(a=>nlSelPlugins.has(a.id)).map(a=>({name:a.name,cat:a.category,desc:"",price:a.price||0,link:(a.links||[])[0]?.url||""})),recipients:ems,senderEmail:adminCfg.email||null})});if(res.ok)setNlResult("Enviado a "+ems.length+" contactos!");else setNlResult("Error: "+await res.text());}catch(e){setNlResult("Error de red. Configura Brevo (ver instrucciones).");}
+    try{const res=await fetch("/.netlify/functions/notify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"newsletter",subject:nlSubject,message:nlBody,imageUrl:nlImageUrl.trim()||null,recipients:ems,senderEmail:adminCfg.email||null})});if(res.ok)setNlResult("Enviado a "+ems.length+" contactos!");else setNlResult("Error: "+await res.text());}catch(e){setNlResult("Error de red. Configura Brevo (ver instrucciones).");}
     setNlSending(false);}
 
   if(!loaded)return<div style={{padding:40,textAlign:"center",color:"#888"}}>...</div>;
@@ -309,9 +309,9 @@ function AdminPanel({onBack}){
         <div style={{fontWeight:700,fontSize:13,marginBottom:8}}>Componer</div>
         <label style={{...lbl,marginTop:0}}>Asunto</label><input style={inp} value={nlSubject} onChange={e=>setNlSubject(e.target.value)} placeholder="Nuevos plugins disponibles!"/>
         <label style={lbl}>Mensaje</label><textarea style={{...inp,minHeight:80,resize:"vertical"}} value={nlBody} onChange={e=>setNlBody(e.target.value)} placeholder="Hola! Tenemos novedades..."/>
-        <label style={lbl}>Plugins destacados (opcionales, se generan cards)</label>
-        <div style={{maxHeight:140,overflow:"auto",border:"1px solid #eee",borderRadius:6,padding:6,marginBottom:8}}>{apps.map(a=><label key={a.id} style={{display:"flex",gap:5,padding:"2px 0",cursor:"pointer",fontSize:11}}><input type="checkbox" checked={nlSelPlugins.has(a.id)} onChange={()=>setNlSelPlugins(p=>{const n=new Set(p);n.has(a.id)?n.delete(a.id):n.add(a.id);return n;})}/><span style={{flex:1}}>{a.name}</span><span style={{color:"#888"}}>${(a.price||0).toLocaleString("es-AR")}</span></label>)}</div>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+        <label style={lbl}>Imagen (URL, opcional)</label><input style={inp} value={nlImageUrl} onChange={e=>setNlImageUrl(e.target.value)} placeholder="https://i.imgur.com/... o link de Drive"/>
+        {nlImageUrl.trim()&&<div style={{marginTop:6,marginBottom:8}}><img src={nlImageUrl.trim()} alt="preview" style={{maxWidth:"100%",maxHeight:200,borderRadius:8,border:"1px solid #ddd"}} onError={e=>{e.target.style.display="none";}}/></div>}
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:8}}>
           <button style={{...bP,opacity:nlSending?.5:1}} onClick={sendNewsletter} disabled={nlSending||getNlEmails().length===0}>{nlSending?"Enviando...":"Enviar via Brevo ("+getNlEmails().length+")"}</button>
           <button style={bO} onClick={()=>{const ems=getNlEmails();if(!nlSubject.trim()||!nlBody.trim()||!ems.length)return;window.open("mailto:?bcc="+ems.join(",")+"&subject="+encodeURIComponent(nlSubject)+"&body="+encodeURIComponent(nlBody),"_blank");}}>Abrir en mail</button>
         </div>
