@@ -128,7 +128,7 @@ function AdminPanel({onBack}){
   const[offers,setOffers]=useState([]);const[showOfferForm,setShowOfferForm]=useState(false);const[editOffer,setEditOffer]=useState(null);
   const[copied,setCopied]=useState(false);const[sorteoCount,setSorteoCount]=useState(1);const[sorteoResult,setSorteoResult]=useState(null);
   const[respSearch,setRespSearch]=useState("");const[respFilter,setRespFilter]=useState("all");
-  const[nlSubject,setNlSubject]=useState("");const[nlBody,setNlBody]=useState("");const[nlImageUrl,setNlImageUrl]=useState("");const[nlSending,setNlSending]=useState(false);const[nlResult,setNlResult]=useState("");const[nlEmails,setNlEmails]=useState(null);const[nlNewEmail,setNlNewEmail]=useState("");
+  const[nlSubject,setNlSubject]=useState("");const[nlBody,setNlBody]=useState("");const[nlImageUrl,setNlImageUrl]=useState("");const[nlUploading,setNlUploading]=useState(false);const[nlSending,setNlSending]=useState(false);const[nlResult,setNlResult]=useState("");const[nlEmails,setNlEmails]=useState(null);const[nlNewEmail,setNlNewEmail]=useState("");
   const[statMode,setStatMode]=useState("month");
   const[packages,setPackages]=useState([]);const[showPkgForm,setShowPkgForm]=useState(false);const[editPkg,setEditPkg]=useState(null);
   const[sesCurrency,setSesCurrency]=useState("ARS");const[sesPkgId,setSesPkgId]=useState("");
@@ -182,6 +182,7 @@ function AdminPanel({onBack}){
   const osData=(()=>{const m={windows:0,mac:0,both:0};acc.forEach(r=>{const o=r.osFilter||"both";m[o]=(m[o]||0)+(r.total||0);});return Object.entries(m).filter(([_,v])=>v>0).map(([k,v])=>({name:k==="windows"?"Windows":k==="mac"?"macOS":"Ambos",value:v}));})();
 
   function getNlEmails(){return nlEmails!==null?nlEmails:allEmails;}
+  async function handleNlImageUpload(e){const file=e.target.files?.[0];if(!file)return;setNlUploading(true);setNlResult("");try{const b64=await new Promise((ok,fail)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=fail;r.readAsDataURL(file);});const res=await fetch("/.netlify/functions/notify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"upload",image:b64})});const data=await res.json();if(data.ok&&data.url){setNlImageUrl(data.url);setNlResult("Imagen subida!");}else{setNlResult("Error: "+(data.error||"No se pudo subir"));}}catch{setNlResult("Error al subir imagen");}setNlUploading(false);}
   async function sendNewsletter(){const ems=getNlEmails();if(!nlSubject.trim()||!nlBody.trim()||ems.length===0)return;setNlSending(true);setNlResult("");
     try{const res=await fetch("/.netlify/functions/notify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"newsletter",subject:nlSubject,message:nlBody,imageUrl:nlImageUrl.trim()||null,recipients:ems,senderEmail:adminCfg.email||null})});if(res.ok)setNlResult("Enviado a "+ems.length+" contactos!");else setNlResult("Error: "+await res.text());}catch(e){setNlResult("Error de red. Configura Brevo (ver instrucciones).");}
     setNlSending(false);}
@@ -309,8 +310,12 @@ function AdminPanel({onBack}){
         <div style={{fontWeight:700,fontSize:13,marginBottom:8}}>Componer</div>
         <label style={{...lbl,marginTop:0}}>Asunto</label><input style={inp} value={nlSubject} onChange={e=>setNlSubject(e.target.value)} placeholder="Nuevos plugins disponibles!"/>
         <label style={lbl}>Mensaje</label><textarea style={{...inp,minHeight:80,resize:"vertical"}} value={nlBody} onChange={e=>setNlBody(e.target.value)} placeholder="Hola! Tenemos novedades..."/>
-        <label style={lbl}>Imagen (URL, opcional)</label><input style={inp} value={nlImageUrl} onChange={e=>setNlImageUrl(e.target.value)} placeholder="https://i.imgur.com/... o link de Drive"/>
-        {nlImageUrl.trim()&&<div style={{marginTop:6,marginBottom:8}}><img src={nlImageUrl.trim()} alt="preview" style={{maxWidth:"100%",maxHeight:200,borderRadius:8,border:"1px solid #ddd"}} onError={e=>{e.target.style.display="none";}}/></div>}
+        <label style={lbl}>Imagen (opcional)</label>
+        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+          <label style={{...bP,background:"#7c3aed",display:"inline-flex",alignItems:"center",gap:4,cursor:nlUploading?"wait":"pointer",opacity:nlUploading?.6:1}}><span>{nlUploading?"Subiendo...":"+ Subir imagen"}</span><input type="file" accept="image/*" onChange={handleNlImageUpload} disabled={nlUploading} style={{display:"none"}}/></label>
+          {nlImageUrl&&<button style={{...bS,color:"#ef4444"}} onClick={()=>setNlImageUrl("")}>Quitar</button>}
+        </div>
+        {nlImageUrl&&<div style={{marginTop:8,marginBottom:8}}><img src={nlImageUrl} alt="preview" style={{maxWidth:"100%",maxHeight:200,borderRadius:8,border:"1px solid #ddd"}}/><p style={{fontSize:10,color:"#888",margin:"4px 0 0",wordBreak:"break-all"}}>{nlImageUrl}</p></div>}
         <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:8}}>
           <button style={{...bP,opacity:nlSending?.5:1}} onClick={sendNewsletter} disabled={nlSending||getNlEmails().length===0}>{nlSending?"Enviando...":"Enviar via Brevo ("+getNlEmails().length+")"}</button>
           <button style={bO} onClick={()=>{const ems=getNlEmails();if(!nlSubject.trim()||!nlBody.trim()||!ems.length)return;window.open("mailto:?bcc="+ems.join(",")+"&subject="+encodeURIComponent(nlSubject)+"&body="+encodeURIComponent(nlBody),"_blank");}}>Abrir en mail</button>
@@ -318,7 +323,7 @@ function AdminPanel({onBack}){
         {nlResult&&<p style={{fontSize:12,marginTop:8,color:nlResult.startsWith("Error")?"#ef4444":"#059669",fontWeight:600}}>{nlResult}</p>}
       </div>
       <div style={sec}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><div style={{fontWeight:700,fontSize:13}}>Lista de envio ({getNlEmails().length})</div><div style={{display:"flex",gap:4}}>{nlEmails!==null&&<button style={{...bS,color:"#f59e0b"}} onClick={()=>setNlEmails(null)}>Reset</button>}<button style={bO} onClick={()=>doCopy(getNlEmails().join("\n"))}>{copied?"OK":"Copiar"}</button></div></div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><div style={{fontWeight:700,fontSize:13}}>Lista de envio ({getNlEmails().length})</div><div style={{display:"flex",gap:4}}><button style={{...bS,color:"#ef4444"}} onClick={()=>setNlEmails([])}>Borrar todos</button>{nlEmails!==null&&<button style={{...bS,color:"#f59e0b"}} onClick={()=>setNlEmails(null)}>Reset</button>}<button style={bO} onClick={()=>doCopy(getNlEmails().join("\n"))}>{copied?"OK":"Copiar"}</button></div></div>
         <div style={{maxHeight:200,overflow:"auto",marginBottom:8}}>{getNlEmails().map((e,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 0",borderBottom:"1px solid #f0f0f0"}}><span style={{flex:1,fontSize:12}}>{e}</span><button onClick={()=>{const cur=nlEmails!==null?[...nlEmails]:[...allEmails];cur.splice(i,1);setNlEmails(cur);}} style={{background:"none",border:"none",color:"#ef4444",cursor:"pointer",fontSize:11,padding:"2px 4px"}}>x</button></div>)}</div>
         <div style={{display:"flex",gap:4}}><input style={{...inp,flex:1,fontSize:11}} value={nlNewEmail} onChange={e=>setNlNewEmail(e.target.value)} placeholder="Agregar email..." onKeyDown={e=>{if(e.key==="Enter"&&nlNewEmail.trim()&&nlNewEmail.includes("@")){const cur=nlEmails!==null?[...nlEmails]:[...allEmails];cur.push(nlNewEmail.trim());setNlEmails(cur);setNlNewEmail("");}}}/><button style={bS} onClick={()=>{if(nlNewEmail.trim()&&nlNewEmail.includes("@")){const cur=nlEmails!==null?[...nlEmails]:[...allEmails];cur.push(nlNewEmail.trim());setNlEmails(cur);setNlNewEmail("");}}}>+</button></div>
       </div>

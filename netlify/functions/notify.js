@@ -1,8 +1,9 @@
 // Netlify serverless function for Soporte Sonoro
-// Handles: budget notification emails + newsletter sending via Brevo API
-// Env var required: BREVO_API_KEY
+// Handles: budget notification emails + newsletter sending via Brevo API + image upload via imgbb
+// Env vars required: BREVO_API_KEY, IMGBB_API_KEY
 
 const BREVO_URL = "https://api.brevo.com/v3/smtp/email";
+const IMGBB_URL = "https://api.imgbb.com/1/upload";
 
 async function sendEmail(apiKey, to, subject, html, sender) {
   const res = await fetch(BREVO_URL, {
@@ -24,6 +25,24 @@ async function sendEmail(apiKey, to, subject, html, sender) {
     throw new Error(`Brevo API error ${res.status}: ${err}`);
   }
   return res.json();
+}
+
+async function uploadToImgbb(apiKey, base64Image) {
+  // Remove data:image/...;base64, prefix if present
+  const clean = base64Image.replace(/^data:image\/\w+;base64,/, "");
+  const form = new URLSearchParams();
+  form.append("key", apiKey);
+  form.append("image", clean);
+  const res = await fetch(IMGBB_URL, {
+    method: "POST",
+    body: form,
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`imgbb error ${res.status}: ${err}`);
+  }
+  const data = await res.json();
+  return data.data.url;
 }
 
 function buildBudgetHtml(data) {
@@ -104,11 +123,6 @@ export const handler = async (event) => {
     return { statusCode: 405, headers, body: JSON.stringify({ error: "Method not allowed" }) };
   }
 
-  const apiKey = process.env.BREVO_API_KEY;
-  if (!apiKey) {
-    return { statusCode: 500, headers, body: JSON.stringify({ error: "BREVO_API_KEY not configured" }) };
-  }
-
   let body;
   try {
     body = JSON.parse(event.body);
@@ -119,8 +133,25 @@ export const handler = async (event) => {
   const { action } = body;
 
   try {
-    if (action === "notify") {
+    if (action === "upload") {
+      // Upload image to imgbb and return public URL
+      const imgbbKey = process.env.IMGBB_API_KEY;
+      if (!imgbbKey) {
+        return { statusCode: 500, headers, body: JSON.stringify({ error: "IMGBB_API_KEY not configured" }) };
+      }
+      const { image } = body;
+      if (!image) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: "image (base64) required" }) };
+      }
+      const url = await uploadToImgbb(imgbbKey, image);
+      return { statusCode: 200, headers, body: JSON.stringify({ ok: true, url }) };
+
+    } else if (action === "notify") {
       // Budget notification to admin
+      const apiKey = process.env.BREVO_API_KEY;
+      if (!apiKey) {
+        return { statusCode: 500, headers, body: JSON.stringify({ error: "BREVO_API_KEY not configured" }) };
+      }
       const { adminEmail } = body;
       if (!adminEmail) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: "adminEmail required" }) };
@@ -132,6 +163,10 @@ export const handler = async (event) => {
 
     } else if (action === "newsletter") {
       // Newsletter to list of emails
+      const apiKey = process.env.BREVO_API_KEY;
+      if (!apiKey) {
+        return { statusCode: 500, headers, body: JSON.stringify({ error: "BREVO_API_KEY not configured" }) };
+      }
       const { recipients, subject, message, imageUrl, senderEmail, senderName } = body;
       if (!recipients || !recipients.length) {
         return { statusCode: 400, headers, body: JSON.stringify({ error: "recipients required" }) };
@@ -145,10 +180,10 @@ export const handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify({ ok: true, message: "Newsletter sent" }) };
 
     } else {
-      return { statusCode: 400, headers, body: JSON.stringify({ error: "Unknown action. Use 'notify' or 'newsletter'" }) };
+      return { statusCode: 400, headers, body: JSON.stringify({ error: "Unknown action. Use 'upload', 'notify' or 'newsletter'" }) };
     }
   } catch (err) {
-    console.error("Brevo error:", err);
+    console.error("Function error:", err);
     return { statusCode: 500, headers, body: JSON.stringify({ error: err.message }) };
   }
 };
